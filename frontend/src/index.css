@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Backgrounds */
+    --bg-void:    #080B12;
+    --bg-base:    #0C1018;
+    --bg-surface: #111827;
+    --bg-elevated:#161E2E;
+
+    /* Borders */
+    --border-subtle:  rgba(255,255,255,0.05);
+    --border-default: rgba(255,255,255,0.09);
+    --border-strong:  rgba(255,255,255,0.16);
+
+    /* Semantic signals */
+    --green:  #10B981;
+    --red:    #F43F5E;
+    --amber:  #F59E0B;
+    --blue:   #3B82F6;
+    --purple: #8B5CF6;
+
+    /* Text */
+    --text-primary:   #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted:     #7C8AA0;
+    --text-disabled:  #475569;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background-color: var(--bg-void);
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: "DM Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-void); }
+::-webkit-scrollbar-thumb { background: #1E2A3D; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2A3D57; }
+
+/* ── Skeleton shimmer ────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ── Card hover glow ─────────────────────────────────── */
+.card-hover {
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* ── Ticker glow ─────────────────────────────────────── */
+.ticker-glow:hover {
+  color: #60a5fa;
+  text-shadow: 0 0 16px rgba(59,130,246,0.5);
+}
+
+/* ── Pulse ring (for EXIT alerts) ────────────────────── */
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+.animate-pulse-ring::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid var(--red);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* ── Subtle glow on signal cards ─────────────────────── */
+.glow-green { box-shadow: 0 0 0 1px rgba(16,185,129,0.12), 0 4px 20px rgba(16,185,129,0.06); }
+.glow-red   { box-shadow: 0 0 0 1px rgba(244,63,94,0.12),  0 4px 20px rgba(244,63,94,0.06);  }
+.glow-amber { box-shadow: 0 0 0 1px rgba(245,158,11,0.12), 0 4px 20px rgba(245,158,11,0.06); }
