@@ -4,7 +4,6 @@ import logging
 import os
 from datetime import datetime, timezone
 
-import requests
 import yfinance as yf
 from fastapi import APIRouter
 import redis as redis_lib
@@ -27,51 +26,83 @@ def _redis():
         return None
 
 
-# ── Endpoints ──────────────────────────────────────────────────────────────────
+# ── VIX endpoint ──────────────────────────────────────────────────────────────
 
-@router.get("/fear-greed")
-async def get_fear_greed():
+_VIX_RANGES = {
+    "30d": {"period": "3mo", "tail": 30},
+    "3m":  {"period": "3mo", "tail": None},
+    "6m":  {"period": "6mo", "tail": None},
+    "1y":  {"period": "1y",  "tail": None},
+}
+
+
+def _fetch_vix(range_key: str = "30d"):
+    """Synchronous helper — run inside asyncio.to_thread."""
+    import pandas as pd
+
+    cfg = _VIX_RANGES.get(range_key, _VIX_RANGES["30d"])
+    df = yf.download("^VIX", period=cfg["period"], interval="1d", auto_adjust=True, progress=False, timeout=15)
+    if df is None or df.empty:
+        return None
+
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+
+    df = df.dropna(subset=["Close"])
+    if len(df) < 2:
+        return None
+
+    if cfg["tail"]:
+        df = df.tail(cfg["tail"])
+
+    closes = []
+    for dt, row in df.iterrows():
+        date_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)[:10]
+        closes.append({"date": date_str, "value": round(float(row["Close"]), 2)})
+
+    current = closes[-1]["value"]
+    previous_close = closes[-2]["value"] if len(closes) >= 2 else None
+    change = round(current - previous_close, 2) if previous_close is not None else None
+    change_pct = round((change / previous_close) * 100, 1) if previous_close and previous_close != 0 else None
+
+    return {
+        "current": current,
+        "previous_close": previous_close,
+        "change": change,
+        "change_pct": change_pct,
+        "closes": closes,
+    }
+
+
+@router.get("/vix")
+async def get_vix(range: str = "30d"):
+    if range not in _VIX_RANGES:
+        range = "30d"
+
     r = _redis()
+    cache_key = f"vix:{range}"
 
     if r:
-        cached = r.get("fear_greed")
+        cached = r.get(cache_key)
         if cached:
             return json.loads(cached)
 
     try:
-        response = await asyncio.to_thread(
-            requests.get,
-            "https://api.alternative.me/fng/?limit=5",
-            timeout=10,
-        )
-        data = response.json()["data"]
-
-        today     = data[0]
-        yesterday = data[1] if len(data) > 1 else data[0]
-        week_ago  = data[4] if len(data) > 4 else data[-1]
-
-        result = {
-            "score":            int(today["value"]),
-            "rating":           today["value_classification"],
-            "previous_close":   int(yesterday["value"]),
-            "previous_1_week":  int(week_ago["value"]),
-            "previous_1_month": None,
-            "timestamp":        today["timestamp"],
-        }
+        result = await asyncio.to_thread(_fetch_vix, range)
+        if result is None:
+            return {"current": None, "error": "VIX data unavailable from yfinance"}
 
         if r:
-            r.setex("fear_greed", 3600, json.dumps(result))
+            r.setex(cache_key, 900, json.dumps(result))
 
         return result
 
     except Exception as e:
-        logger.error(f"Fear & Greed error: {e}")
-        return {
-            "score": None,
-            "rating": "Unavailable",
-            "error": str(e),
-        }
+        logger.error(f"VIX fetch error: {e}")
+        return {"current": None, "error": str(e)}
 
+
+# ── News feed endpoint ────────────────────────────────────────────────────────
 
 def _fetch_news_for_ticker(ticker: str):
     """Synchronous helper — run inside asyncio.to_thread."""

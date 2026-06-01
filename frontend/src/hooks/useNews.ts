@@ -1,16 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 
-export interface FearGreedData {
-  score: number | null;
-  rating: string;
-  previous_close: number | null;
-  previous_1_week: number | null;
-  previous_1_month: number | null;
-  timestamp: string;
-  error?: string;
-}
-
 export interface NewsArticle {
   ticker: string;
   title: string;
@@ -19,14 +9,25 @@ export interface NewsArticle {
   published_at: string | null;
 }
 
-export function useFearGreed() {
-  return useQuery<FearGreedData>({
-    queryKey: ["fear-greed"],
+export interface VixData {
+  current: number | null;
+  previous_close: number | null;
+  change: number | null;
+  change_pct: number | null;
+  closes: { date: string; value: number }[];
+  error?: string;
+}
+
+export type VixRange = "30d" | "3m" | "6m" | "1y";
+
+export function useVix(range: VixRange = "30d") {
+  return useQuery<VixData>({
+    queryKey: ["vix", range],
     queryFn: async () => {
-      const res = await api.get("/api/news/fear-greed");
+      const res = await api.get(`/api/news/vix?range=${range}`);
       return res.data;
     },
-    staleTime: 3_600_000,
+    staleTime: 900_000,
     retry: 2,
   });
 }
@@ -47,7 +48,7 @@ export function useNewsFeed(tickers: string[]) {
 export function useNewsRefresh() {
   const qc = useQueryClient();
   return () => {
-    qc.invalidateQueries({ queryKey: ["fear-greed"] });
+    qc.invalidateQueries({ queryKey: ["vix"] });
     qc.invalidateQueries({ queryKey: ["news-feed"] });
   };
 }
