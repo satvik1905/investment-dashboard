@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useAppStore } from "../store/appStore";
+import { StockDetailModal } from "../components/StockDetailModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -152,10 +153,12 @@ function MonthlyTooltip() {
 function ResultRow({
   row,
   onAddToWatchlist,
+  onTickerClick,
   isMonthlyView = false,
 }: {
   row: ScannerResult;
   onAddToWatchlist: (ticker: string) => void;
+  onTickerClick: (ticker: string) => void;
   isMonthlyView?: boolean;
 }) {
   const isRed = row.candle_type === "RED";
@@ -173,9 +176,10 @@ function ResultRow({
       <td className="py-3 pl-4">
         <div className="flex items-center gap-2 flex-wrap">
           <span
+            onClick={() => onTickerClick(row.ticker)}
             className={`text-sm font-mono font-bold tracking-wide ${
               isRed ? "text-accent-green" : row.candle_type === "YELLOW" ? "text-accent-amber" : "text-text-primary"
-            } hover:opacity-80 cursor-default`}
+            } ticker-glow cursor-pointer`}
           >
             {row.ticker}
           </span>
@@ -275,6 +279,7 @@ export function Scanner() {
   const queryClient = useQueryClient();
   const { setActiveTab, setSelectedTicker } = useAppStore();
 
+  const [detailTicker, setDetailTicker] = useState<string | null>(null);
   const [activeCandle, setActiveCandle] = useState<"RED" | "YELLOW" | "MONTHLY_RED" | "MONTHLY_YELLOW">("RED");
   const [filterMode, setFilterMode] = useState<"all" | "volume_spike" | "strong_reversal">("all");
   const [sortMode, setSortMode] = useState<"prior_candles" | "volume" | "change">("prior_candles");
@@ -456,6 +461,14 @@ export function Scanner() {
   const scanWasRun = !!latestDate || progress?.status === "complete";
 
   return (
+    <>
+    {detailTicker && (
+      <StockDetailModal
+        ticker={detailTicker}
+        signal={null}
+        onClose={() => setDetailTicker(null)}
+      />
+    )}
     <div className="p-6 max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-4">
@@ -762,6 +775,7 @@ export function Scanner() {
                       key={row.id}
                       row={row}
                       onAddToWatchlist={handleAddToWatchlist}
+                      onTickerClick={setDetailTicker}
                       isMonthlyView={isMonthlyTab}
                     />
                   ))}
@@ -791,5 +805,6 @@ export function Scanner() {
         </div>
       )}
     </div>
+    </>
   );
 }

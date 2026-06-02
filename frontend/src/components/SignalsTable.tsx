@@ -458,36 +458,26 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove, tickerInpu
   return (
     <div>
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-3">
-        {/* Search */}
-        <div className="relative flex-1 max-w-xs">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
-            width="13" height="13" viewBox="0 0 14 14" fill="none"
-          >
-            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter tickers..."
-            className="w-full pl-9 pr-3 py-2 rounded-lg bg-bg-secondary border border-[rgba(255,255,255,0.07)] text-text-primary text-xs font-mono placeholder:text-text-tertiary focus:outline-none focus:border-accent-blue/40 transition-colors"
-          />
-        </div>
+      <div className="flex items-center flex-wrap gap-3 mb-3">
+        {/* LEFT — filter zone: search + chips + display toggle */}
+        <div className="flex items-center gap-2">
+          <div className="relative w-48">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+              width="13" height="13" viewBox="0 0 14 14" fill="none"
+            >
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter tickers..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg bg-bg-secondary border border-[rgba(255,255,255,0.07)] text-text-primary text-xs font-mono placeholder:text-text-tertiary focus:outline-none focus:border-accent-blue/40 transition-colors"
+            />
+          </div>
 
-        <div className="flex items-center gap-2 ml-auto">
-          {/* Confidence variant toggle */}
-          <button
-            onClick={() => setConfVariant((v) => (v === "number" ? "bar" : "number"))}
-            title={`Confidence: ${confVariant === "number" ? "number only" : "number + bar"}`}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-[rgba(255,255,255,0.05)] transition-all text-[10px] font-mono border border-[rgba(255,255,255,0.06)]"
-          >
-            {confVariant === "number" ? "#" : "▬"}
-          </button>
-
-          {/* Filter chips */}
           {(["BUY", "SELL", "HOLD"] as SignalFilter[]).map((f) => {
             const active = filterActive(f);
             const colors: Record<SignalFilter, { on: string; off: string }> = {
@@ -496,7 +486,7 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove, tickerInpu
               HOLD: { on: "bg-[rgba(255,255,255,0.08)] text-text-secondary border-[rgba(255,255,255,0.1)]", off: "text-text-tertiary border-[rgba(255,255,255,0.06)]" },
             };
             const cls = filters.size === 0
-              ? colors[f].on  // All active when none selected
+              ? colors[f].on
               : active ? colors[f].on : colors[f].off;
             return (
               <button
@@ -512,32 +502,40 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove, tickerInpu
             );
           })}
 
-          {/* Add ticker */}
-          <div className="flex items-center gap-2">
-            <TickerAutocomplete
-              value={tickerInput}
-              onChange={onTickerInputChange}
-              onSelect={onTickerSelect}
-              onSubmit={onAddSubmit}
-              disabled={addPending}
-              placeholder="Add ticker..."
-            />
-            <button
-              onClick={onAddSubmit}
-              disabled={!tickerInput.trim() || addPending}
-              className={cn(
-                "px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all",
-                "bg-accent-green/10 hover:bg-accent-green/20 border-accent-green/30 text-accent-green",
-                "disabled:opacity-40 disabled:cursor-not-allowed",
-              )}
-            >
-              {addPending ? (
-                <span className="w-3 h-3 border-[1.5px] border-accent-green/30 border-t-accent-green rounded-full animate-spin block" />
-              ) : (
-                <span className="text-sm leading-none font-light">+</span>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={() => setConfVariant((v) => (v === "number" ? "bar" : "number"))}
+            title={`Confidence: ${confVariant === "number" ? "number only" : "number + bar"}`}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-[rgba(255,255,255,0.05)] transition-all text-[10px] font-mono border border-[rgba(255,255,255,0.06)]"
+          >
+            {confVariant === "number" ? "#" : "▬"}
+          </button>
+        </div>
+
+        {/* RIGHT — add zone */}
+        <div className="flex items-center gap-2 ml-auto">
+          <TickerAutocomplete
+            value={tickerInput}
+            onChange={onTickerInputChange}
+            onSelect={onTickerSelect}
+            onSubmit={onAddSubmit}
+            disabled={addPending}
+            placeholder="Add ticker..."
+          />
+          <button
+            onClick={onAddSubmit}
+            disabled={!tickerInput.trim() || addPending}
+            className={cn(
+              "px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all",
+              "bg-accent-green/10 hover:bg-accent-green/20 border-accent-green/30 text-accent-green",
+              "disabled:opacity-40 disabled:cursor-not-allowed",
+            )}
+          >
+            {addPending ? (
+              <span className="w-3 h-3 border-[1.5px] border-accent-green/30 border-t-accent-green rounded-full animate-spin block" />
+            ) : (
+              <span className="text-sm leading-none font-light">+</span>
+            )}
+          </button>
         </div>
       </div>
 
