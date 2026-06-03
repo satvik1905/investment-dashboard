@@ -175,7 +175,6 @@ export function Watchlist() {
   const { quotes } = useLiveQuotes(tickers);
 
   const [detailTicker, setDetailTicker] = useState<string | null>(null);
-  const [detailSignal, setDetailSignal] = useState<Signal | null>(null);
   const [refreshingTicker, setRefreshingTicker] = useState<string | null>(null);
 
   const removeSignal = useRemoveSignal();
@@ -193,8 +192,7 @@ export function Watchlist() {
       {detailTicker && (
         <StockDetailModal
           ticker={detailTicker}
-          signal={detailSignal}
-          onClose={() => { setDetailTicker(null); setDetailSignal(null); }}
+          onClose={() => setDetailTicker(null)}
         />
       )}
 
@@ -244,7 +242,7 @@ export function Watchlist() {
                 key={signal.id}
                 signal={signal}
                 quote={quotes[signal.ticker]}
-                onOpen={() => { setDetailTicker(signal.ticker); setDetailSignal(signal); }}
+                onOpen={() => setDetailTicker(signal.ticker)}
                 onRemove={() => removeSignal.mutate(signal.ticker)}
                 onRefresh={() => handleRefresh(signal.ticker)}
                 refreshing={refreshingTicker === signal.ticker}

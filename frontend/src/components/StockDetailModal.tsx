@@ -5,7 +5,7 @@ import {
   CrosshairMode,
   LineStyle,
 } from "lightweight-charts";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import api from "../api/client";
 import type { Signal } from "../hooks/useSignals";
 import { useLiveQuotes } from "../hooks/useLivePrice";
@@ -37,8 +37,13 @@ interface ChartData {
 
 interface Props {
   ticker: string;
-  signal: Signal | null;
   onClose: () => void;
+}
+
+interface RefreshResult {
+  refreshed: boolean;
+  validation_warnings: string[] | null;
+  signal: Signal | null;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -85,8 +90,46 @@ function getInitialTimeframe(): Timeframe {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function StockDetailModal({ ticker, signal, onClose }: Props) {
+export function StockDetailModal({ ticker, onClose }: Props) {
   const [timeframe, setTimeframe] = useState<Timeframe>(getInitialTimeframe);
+  const [contextState, setContextState] = useState<"idle" | "loading" | "done">("idle");
+  const [contextText, setContextText] = useState<string | null>(null);
+  const [chartAnalysisState, setChartAnalysisState] = useState<"idle" | "loading" | "done">("idle");
+  const [chartAnalysisText, setChartAnalysisText] = useState<string | null>(null);
+  const [setupReviewState, setSetupReviewState] = useState<"idle" | "loading" | "done">("idle");
+  const [setupReviewText, setSetupReviewText] = useState<string | null>(null);
+
+  // ── Signal refresh on mount ─────────────────────────────────────────────
+  const queryClient = useQueryClient();
+  const [signal, setSignal] = useState<Signal | null>(null);
+  const [signalLoading, setSignalLoading] = useState(true);
+  const [signalRefreshed, setSignalRefreshed] = useState(false);
+  const [signalWarnings, setSignalWarnings] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.post<RefreshResult>(`/api/signals/refresh?ticker=${ticker}`);
+        if (cancelled) return;
+        const r = res.data;
+        setSignal(r.signal);
+        setSignalRefreshed(r.refreshed);
+        setSignalWarnings(r.validation_warnings);
+        // Invalidate every view so Watchlist, Dashboard, and Scanner stay in sync
+        queryClient.invalidateQueries({ queryKey: ["signals"] });
+        queryClient.invalidateQueries({ queryKey: ["scanner-results"] });
+      } catch {
+        if (cancelled) return;
+        setSignal(null);
+        setSignalRefreshed(false);
+        setSignalWarnings(["Could not reach the server"]);
+      } finally {
+        if (!cancelled) setSignalLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ticker]);
 
   const mainRef    = useRef<HTMLDivElement>(null);
   const volRef     = useRef<HTMLDivElement>(null);
@@ -441,8 +484,31 @@ export function StockDetailModal({ ticker, signal, onClose }: Props) {
 
         {/* ── Signal panel ─────────────────────────────────────────────────── */}
         <div className="w-80 border-l border-white/[0.08] bg-bg-secondary flex flex-col overflow-y-auto shrink-0">
-          {signal ? (
+          {signalLoading ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
+              <div className="w-6 h-6 border-2 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
+              <span className="text-text-secondary text-xs">Updating signal…</span>
+            </div>
+          ) : signal ? (
             <div className="p-5 space-y-5">
+
+              {/* Stale / validation-fail banner */}
+              {!signalRefreshed && signalWarnings && (
+                <div className="px-3 py-3 rounded-lg border-2 border-accent-red/40 bg-accent-red/10">
+                  <div className="text-accent-red text-xs font-bold uppercase tracking-wider mb-1">Could not refresh</div>
+                  <p className="text-accent-red/80 text-xs leading-relaxed">{signalWarnings.join(" · ")}</p>
+                  {signal.generated_at && (
+                    <p className="text-text-tertiary text-[10px] mt-1.5">
+                      Showing last known signal from {new Date(signal.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Fresh indicator */}
+              {signalRefreshed && (
+                <div className="text-center text-[10px] text-accent-green/70 uppercase tracking-wider">Updated just now</div>
+              )}
 
               {/* Confidence */}
               <div className="flex flex-col items-center gap-1 pt-2">
@@ -523,6 +589,136 @@ export function StockDetailModal({ ticker, signal, onClose }: Props) {
                 </div>
               )}
 
+              {/* Claude context read */}
+              <div>
+                {contextState === "idle" && (
+                  <button
+                    onClick={async () => {
+                      setContextState("loading");
+                      try {
+                        const res = await api.post(`/api/stocks/${ticker}/context`);
+                        setContextText(res.data.context ?? null);
+                      } catch {
+                        setContextText(null);
+                      }
+                      setContextState("done");
+                    }}
+                    className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 transition-colors"
+                  >
+                    ✦ Get context read
+                  </button>
+                )}
+                {contextState === "loading" && (
+                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
+                    <div className="w-3.5 h-3.5 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
+                    <span className="text-accent-purple/70 text-xs">Analyzing… this takes a few seconds</span>
+                  </div>
+                )}
+                {contextState === "done" && (
+                  <div className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="text-accent-purple text-xs">✦</span>
+                      <span className="text-accent-purple/70 text-xs uppercase tracking-wider font-semibold">AI Context</span>
+                    </div>
+                    <p className="text-text-secondary text-xs leading-relaxed">
+                      {contextText ?? "Context unavailable right now"}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Claude chart analysis */}
+              <div>
+                {chartAnalysisState === "idle" && (
+                  <button
+                    onClick={async () => {
+                      setChartAnalysisState("loading");
+                      try {
+                        const res = await api.post(`/api/stocks/${ticker}/chart-analysis`);
+                        setChartAnalysisText(res.data.analysis ?? null);
+                      } catch {
+                        setChartAnalysisText(null);
+                      }
+                      setChartAnalysisState("done");
+                    }}
+                    className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 transition-colors"
+                  >
+                    ✦ Analyze the charts
+                  </button>
+                )}
+                {chartAnalysisState === "loading" && (
+                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
+                    <div className="w-3.5 h-3.5 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
+                    <span className="text-accent-purple/70 text-xs">Analyzing charts… this takes a few seconds</span>
+                  </div>
+                )}
+                {chartAnalysisState === "done" && (
+                  <>
+                    <div className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 p-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-accent-purple text-xs">✦</span>
+                        <span className="text-accent-purple/70 text-xs uppercase tracking-wider font-semibold">Chart Analysis</span>
+                      </div>
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        {chartAnalysisText ?? "Chart analysis unavailable right now"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setChartAnalysisState("idle"); setChartAnalysisText(null); }}
+                      className="w-full mt-1.5 px-3 py-1.5 text-[10px] text-text-tertiary hover:text-accent-purple transition-colors"
+                    >
+                      Re-run analysis
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Claude setup review */}
+              <div>
+                {setupReviewState === "idle" && (
+                  <button
+                    onClick={async () => {
+                      setSetupReviewState("loading");
+                      try {
+                        const res = await api.post(`/api/stocks/${ticker}/setup-review`);
+                        setSetupReviewText(res.data.review ?? null);
+                      } catch {
+                        setSetupReviewText(null);
+                      }
+                      setSetupReviewState("done");
+                    }}
+                    className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 transition-colors"
+                  >
+                    ✦ Get setup review
+                  </button>
+                )}
+                {setupReviewState === "loading" && (
+                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
+                    <div className="w-3.5 h-3.5 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
+                    <span className="text-accent-purple/70 text-xs">Reviewing setup… this takes a few seconds</span>
+                  </div>
+                )}
+                {setupReviewState === "done" && (
+                  <>
+                    <div className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 p-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-accent-purple text-xs">✦</span>
+                        <span className="text-accent-purple/70 text-xs uppercase tracking-wider font-semibold">AI Setup Review</span>
+                      </div>
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        {setupReviewText ?? "Setup review unavailable right now"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setSetupReviewState("idle"); setSetupReviewText(null); }}
+                      className="w-full mt-1.5 px-3 py-1.5 text-[10px] text-text-tertiary hover:text-accent-purple transition-colors"
+                    >
+                      Re-run review
+                    </button>
+                  </>
+                )}
+              </div>
+
               {/* Risk factors */}
               {signal.risk_factors && signal.risk_factors.length > 0 && (
                 <div>
@@ -543,7 +739,10 @@ export function StockDetailModal({ ticker, signal, onClose }: Props) {
             <div className="flex-1 flex items-center justify-center p-6 text-center text-text-tertiary">
               <div>
                 <div className="text-3xl mb-3">◎</div>
-                <p className="text-sm">No signal generated for {ticker} yet.</p>
+                <p className="text-sm">No signal available for {ticker}.</p>
+                {signalWarnings && (
+                  <p className="text-accent-red/80 text-xs mt-2">{signalWarnings.join(" · ")}</p>
+                )}
               </div>
             </div>
           )}

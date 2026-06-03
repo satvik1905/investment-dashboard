@@ -75,16 +75,23 @@ def _generate_signal_math(df, ind: dict, danny: dict) -> dict:
     # ── Target ──────────────────────────────────────────────────────────────
     resistance = ind.get("resistance")
     support    = ind.get("support")
+    atr = ind.get("atr_14")
 
     if signal == "BUY" and resistance and float(resistance) > current_price:
-        target = round(float(resistance), 2)
+        candidate = round(float(resistance), 2)
+        entry_mid = current_price * 0.99  # midpoint of the ±2% entry band
+        reward = candidate - entry_mid
+        # Suppress target if reward < 1×ATR (within daily noise)
+        target = candidate if (not atr or reward >= float(atr)) else None
     elif signal == "SELL" and support and float(support) < current_price:
-        target = round(float(support), 2)
+        candidate = round(float(support), 2)
+        entry_mid = current_price * 1.01
+        reward = entry_mid - candidate
+        target = candidate if (not atr or reward >= float(atr)) else None
     else:
         target = None
 
     # ── Stop loss ───────────────────────────────────────────────────────────
-    atr = ind.get("atr_14")
     if signal == "BUY" and support and atr:
         stop = round(float(support) - 0.5 * float(atr), 2)
     elif signal == "SELL" and resistance and atr:
@@ -222,6 +229,94 @@ def generate_signal(ticker: str, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error("Signal generation failed for %s: %s", ticker, e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/refresh")
+def refresh_signal(ticker: str, db: Session = Depends(get_db)):
+    """
+    Refresh a signal for the modal: generate fresh if validation passes,
+    fall back to the stale DB row with warnings if it doesn't.
+    Always returns 200 — the frontend reads `refreshed` to decide UI.
+    """
+    ticker = ticker.upper()
+    ticker_status = market_data.validate_ticker(ticker)
+
+    # ── Validation failed — return stale row + warnings ───────────────────
+    if not ticker_status.is_valid:
+        stale = (
+            db.query(Signal)
+            .filter(Signal.ticker == ticker)
+            .order_by(Signal.generated_at.desc())
+            .first()
+        )
+        return {
+            "refreshed": False,
+            "validation_warnings": ticker_status.warnings,
+            "signal": SignalResponse.model_validate(stale).model_dump(mode="json") if stale else None,
+        }
+
+    # ── Validation passed — generate fresh ────────────────────────────────
+    try:
+        df    = market_data.get_ohlcv(ticker, period="6mo")
+        ind   = indicators.compute_all(df)
+        danny = indicators.compute_danny_cheng(df)
+
+        ind["danny_current_color"]        = danny["current_color"]
+        ind["danny_trend_sequence"]       = danny["trend_sequence"]
+        ind["danny_vol_hole_active"]      = danny["vol_hole_active"]
+        ind["danny_current_trend"]        = danny["current_trend"]
+        ind["danny_last_signal_color"]    = danny["last_signal_color"]
+        ind["danny_last_signal_date"]     = danny["last_signal_date"]
+        ind["danny_candles_since_signal"] = danny["candles_since_signal"]
+
+        if ticker_status.is_suspicious:
+            ind["data_warning"] = ticker_status.warnings
+
+        signal_data = _generate_signal_math(df, ind, danny)
+        now = datetime.now(timezone.utc)
+
+        db_signal = (
+            db.query(Signal)
+            .filter(Signal.ticker == ticker)
+            .filter(func.date(Signal.generated_at) == now.date())
+            .first()
+        )
+        if db_signal:
+            for field, val in signal_data.items():
+                setattr(db_signal, field, val)
+            db_signal.raw_indicators = ind
+            db_signal.generated_at   = now
+        else:
+            db_signal = Signal(
+                ticker=ticker,
+                raw_indicators=ind,
+                generated_at=now,
+                **signal_data,
+            )
+            db.add(db_signal)
+
+        db.commit()
+        db.refresh(db_signal)
+
+        return {
+            "refreshed": True,
+            "validation_warnings": ticker_status.warnings if ticker_status.is_suspicious else None,
+            "signal": SignalResponse.model_validate(db_signal).model_dump(mode="json"),
+        }
+
+    except Exception as e:
+        logger.error("Signal refresh failed for %s: %s", ticker, e, exc_info=True)
+        stale = (
+            db.query(Signal)
+            .filter(Signal.ticker == ticker)
+            .order_by(Signal.generated_at.desc())
+            .first()
+        )
+        return {
+            "refreshed": False,
+            "validation_warnings": [f"Refresh failed: {e}"],
+            "signal": SignalResponse.model_validate(stale).model_dump(mode="json") if stale else None,
+        }
 
 
 @router.delete("/{ticker}")

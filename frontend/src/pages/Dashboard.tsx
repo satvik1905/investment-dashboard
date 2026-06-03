@@ -9,7 +9,6 @@ import { PositionCard } from "../components/PositionCard";
 import { StockDetailModal } from "../components/StockDetailModal";
 import { ToastContainer, useToast } from "../components/Toast";
 import { useRemoveSignal, useGenerateSignal } from "../hooks/useSignals";
-import type { Signal } from "../hooks/useSignals";
 import { TickerAutocomplete } from "../components/TickerAutocomplete";
 import { AlertBanner } from "../components/AlertBanner";
 import { cn } from "../lib/utils";
@@ -86,7 +85,6 @@ export function Dashboard() {
   const tickers = signals?.map((s) => s.ticker) ?? [];
   const { quotes, marketStatus } = useLiveQuotes(tickers);
 
-  const [detailSignal, setDetailSignal] = useState<Signal | null>(null);
   const [detailTicker, setDetailTicker] = useState<string | null>(null);
   const [tickerInput, setTickerInput] = useState("");
 
@@ -128,8 +126,7 @@ export function Dashboard() {
       {detailTicker && (
         <StockDetailModal
           ticker={detailTicker}
-          signal={detailSignal}
-          onClose={() => { setDetailTicker(null); setDetailSignal(null); }}
+          onClose={() => setDetailTicker(null)}
         />
       )}
 
@@ -183,7 +180,7 @@ export function Dashboard() {
             <SignalsTable
               signals={signals}
               quotes={quotes}
-              onRowClick={(signal) => { setDetailTicker(signal.ticker); setDetailSignal(signal); }}
+              onRowClick={(signal) => setDetailTicker(signal.ticker)}
               onRemove={(ticker) => removeSignal.mutate(ticker)}
               tickerInput={tickerInput}
               onTickerInputChange={setTickerInput}

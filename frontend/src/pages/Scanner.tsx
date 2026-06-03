@@ -465,7 +465,6 @@ export function Scanner() {
     {detailTicker && (
       <StockDetailModal
         ticker={detailTicker}
-        signal={null}
         onClose={() => setDetailTicker(null)}
       />
     )}
