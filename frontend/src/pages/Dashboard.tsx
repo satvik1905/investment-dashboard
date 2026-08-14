@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useSignals } from "../hooks/useSignals";
 import { usePositions, usePositionAlerts } from "../hooks/usePositions";
 import { useDashboard } from "../hooks/useJournal";
@@ -7,27 +8,29 @@ import type { LiveQuote } from "../hooks/useLivePrice";
 import { SignalsTable } from "../components/SignalsTable";
 import { PositionCard } from "../components/PositionCard";
 import { StockDetailModal } from "../components/StockDetailModal";
-import { ToastContainer, useToast } from "../components/Toast";
 import { useRemoveSignal, useGenerateSignal } from "../hooks/useSignals";
 import { TickerAutocomplete } from "../components/TickerAutocomplete";
 import { AlertBanner } from "../components/AlertBanner";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 // ── Market status pill ────────────────────────────────────────────────────────
 
 function MarketPill({ status }: { status: LiveQuote["market_status"] | null }) {
   if (!status) return null;
   const cfg = {
-    OPEN:        { dot: "bg-accent-green animate-pulse", label: "Market Open",  cls: "border-accent-green/20 text-accent-green" },
-    PRE_MARKET:  { dot: "bg-accent-amber animate-pulse", label: "Pre-Market",   cls: "border-accent-amber/20 text-accent-amber" },
-    AFTER_HOURS: { dot: "bg-accent-amber",               label: "After Hours",  cls: "border-accent-amber/20 text-accent-amber" },
-    CLOSED:      { dot: "bg-accent-red",                 label: "Market Closed",cls: "border-accent-red/20 text-text-secondary" },
+    OPEN:        { dot: "bg-accent-green animate-pulse", label: "Market Open",  variant: "buy" as const },
+    PRE_MARKET:  { dot: "bg-accent-amber animate-pulse", label: "Pre-Market",   variant: "warning" as const },
+    AFTER_HOURS: { dot: "bg-accent-amber",               label: "After Hours",  variant: "warning" as const },
+    CLOSED:      { dot: "bg-accent-red",                 label: "Market Closed", variant: "loss" as const },
   }[status];
   return (
-    <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full border bg-bg-secondary text-xs font-mono", cfg.cls)}>
+    <Badge variant={cfg.variant} className="flex items-center gap-2 px-3 py-1.5 h-auto text-xs font-mono">
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", cfg.dot)} />
       {cfg.label}
-    </div>
+    </Badge>
   );
 }
 
@@ -35,12 +38,14 @@ function MarketPill({ status }: { status: LiveQuote["market_status"] | null }) {
 
 function StatPill({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-bg-secondary border border-[rgba(255,255,255,0.06)]">
-      <div>
-        <div className="text-text-tertiary text-[10px] uppercase tracking-widest font-mono">{label}</div>
-        <div className={cn("font-mono text-sm font-semibold mt-0.5", valueClass ?? "text-text-primary")}>{value}</div>
-      </div>
-    </div>
+    <Card className="p-0">
+      <CardContent className="flex items-center gap-3 px-4 py-2.5">
+        <div>
+          <div className="text-text-tertiary text-[10px] uppercase tracking-widest font-mono">{label}</div>
+          <div className={cn("font-mono text-sm font-semibold mt-0.5", valueClass ?? "text-text-primary")}>{value}</div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -48,12 +53,14 @@ function StatPill({ label, value, valueClass }: { label: string; value: string; 
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-14 border border-[rgba(255,255,255,0.05)] rounded-xl text-center">
-      <div className="w-10 h-10 rounded-full border border-[rgba(255,255,255,0.08)] flex items-center justify-center mb-3">
-        <span className="text-text-muted text-lg">◎</span>
-      </div>
-      <p className="text-text-tertiary text-sm">{message}</p>
-    </div>
+    <Card className="flex flex-col items-center justify-center py-14 text-center">
+      <CardContent className="flex flex-col items-center">
+        <div className="w-10 h-10 rounded-full border border-[rgba(0,0,0,0.10)] flex items-center justify-center mb-3">
+          <span className="text-text-muted text-lg">◎</span>
+        </div>
+        <p className="text-text-tertiary text-sm">{message}</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -66,9 +73,9 @@ function SectionHeader({ title, count }: { title: string; count?: number }) {
         {title}
       </h2>
       {count !== undefined && (
-        <span className="px-2 py-0.5 rounded-md bg-bg-secondary border border-[rgba(255,255,255,0.06)] text-text-tertiary text-xs font-mono">
+        <Badge variant="outline" className="text-xs font-mono text-text-tertiary">
           {count}
-        </span>
+        </Badge>
       )}
     </div>
   );
@@ -88,11 +95,9 @@ export function Dashboard() {
   const [detailTicker, setDetailTicker] = useState<string | null>(null);
   const [tickerInput, setTickerInput] = useState("");
 
-  const { toasts, show: showToast, dismiss: dismissToast } = useToast();
-
   const removeSignal = useRemoveSignal({
-    onSuccess: (ticker) => showToast(`${ticker} removed`, "success"),
-    onError:   (ticker) => showToast(`Failed to remove ${ticker}`, "error"),
+    onSuccess: (ticker) => toast.success(`${ticker} removed`),
+    onError:   (ticker) => toast.error(`Failed to remove ${ticker}`),
   });
 
   const addSignal = useGenerateSignal({
@@ -103,7 +108,7 @@ export function Dashboard() {
     const t = tickerInput.trim().toUpperCase();
     if (!t) return;
     addSignal.mutate(t, {
-      onSuccess: (sig) => showToast(`${sig.ticker} added — ${sig.signal}`, "success"),
+      onSuccess: (sig) => toast.success(`${sig.ticker} added — ${sig.signal}`),
       onError:   (err: unknown) => {
         const detail = (err as { response?: { data?: { detail?: { message?: string; warnings?: string[] } | string } } })?.response?.data?.detail;
         let msg: string;
@@ -112,7 +117,7 @@ export function Dashboard() {
         } else {
           msg = typeof detail === "string" ? detail : `Could not add ${t}`;
         }
-        showToast(msg, "error");
+        toast.error(msg);
       },
     });
   };
@@ -122,7 +127,6 @@ export function Dashboard() {
 
   return (
     <>
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       {detailTicker && (
         <StockDetailModal
           ticker={detailTicker}
@@ -200,14 +204,11 @@ export function Dashboard() {
                   disabled={addSignal.isPending}
                   placeholder="Add stock to watchlist — e.g. AAPL, TSLA, NVDA"
                 />
-                <button
+                <Button
+                  variant="outline"
                   onClick={handleAdd}
                   disabled={!tickerInput.trim() || addSignal.isPending}
-                  className={cn(
-                    "px-5 py-3 rounded-xl border text-sm font-semibold flex items-center gap-2 shrink-0 transition-all",
-                    "bg-accent-green/10 hover:bg-accent-green/20 border-accent-green/30 text-accent-green",
-                    "disabled:opacity-40 disabled:cursor-not-allowed",
-                  )}
+                  className="px-5 py-3 h-auto bg-accent-green/10 hover:bg-accent-green/20 border-accent-green/30 text-accent-green text-sm font-semibold"
                 >
                   {addSignal.isPending ? (
                     <span className="w-4 h-4 border-2 border-accent-green/30 border-t-accent-green rounded-full animate-spin" />
@@ -215,7 +216,7 @@ export function Dashboard() {
                     <span className="text-lg leading-none font-light">+</span>
                   )}
                   <span>{addSignal.isPending ? "Adding…" : "Add"}</span>
-                </button>
+                </Button>
               </div>
               <EmptyState message="No signals yet. Enter a ticker above to analyze." />
             </div>

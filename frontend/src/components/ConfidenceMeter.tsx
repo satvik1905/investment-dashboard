@@ -35,7 +35,7 @@ export function ConfidenceMeter({ confidence, size = 80 }: Props) {
           cy={cy}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
+          stroke="rgba(0,0,0,0.08)"
           strokeWidth={6}
           strokeDasharray={`${arcLength} ${circumference - arcLength}`}
           strokeDashoffset={circumference * 0.125}
@@ -57,9 +57,9 @@ export function ConfidenceMeter({ confidence, size = 80 }: Props) {
           x={cx}
           y={cy + 5}
           textAnchor="middle"
-          fill="#f1f5f9"
+          fill="#1A1A2E"
           fontSize={size * 0.22}
-          fontFamily="DM Mono, monospace"
+          fontFamily="Roboto Mono, monospace"
           fontWeight="500"
         >
           {confidence}
@@ -70,7 +70,7 @@ export function ConfidenceMeter({ confidence, size = 80 }: Props) {
           textAnchor="middle"
           fill="var(--text-disabled)"
           fontSize={size * 0.14}
-          fontFamily="DM Sans, sans-serif"
+          fontFamily="Roboto, sans-serif"
         >
           %
         </text>

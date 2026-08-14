@@ -1,72 +1,90 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Backgrounds */
-    --bg-void:    #080B12;
-    --bg-base:    #0C1018;
-    --bg-surface: #111827;
-    --bg-elevated:#161E2E;
+    /* ── SwingIQ custom palette ──────────────────────────── */
+    --bg-void:    #EBEBEB;
+    --bg-base:    #F5F5F5;
+    --bg-surface: #FFFFFF;
+    --bg-elevated:#F7F7F9;
 
-    /* Borders */
-    --border-subtle:  rgba(255,255,255,0.05);
-    --border-default: rgba(255,255,255,0.09);
-    --border-strong:  rgba(255,255,255,0.16);
+    --border-subtle:  rgba(0,0,0,0.06);
+    --border-default: rgba(0,0,0,0.12);
+    --border-strong:  rgba(0,0,0,0.20);
 
-    /* Semantic signals */
-    --green:  #10B981;
-    --red:    #F43F5E;
-    --amber:  #F59E0B;
-    --blue:   #3B82F6;
-    --purple: #8B5CF6;
+    --green:  #16A34A;
+    --red:    #DC2626;
+    --amber:  #D97706;
+    --blue:   #2563EB;
+    --purple: #7C3AED;
 
-    /* Text */
-    --text-primary:   #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-muted:     #7C8AA0;
-    --text-disabled:  #475569;
+    --text-primary:   #1A1A2E;
+    --text-secondary: #475569;
+    --text-muted:     #64748B;
+    --text-disabled:  #94A3B8;
+
+    /* ── shadcn theme (light) ────────────────────────────── */
+    --background:    oklch(0.961 0 0);       /* #F5F5F5 */
+    --foreground:    oklch(0.145 0 0);       /* near-black */
+    --card:    oklch(1 0 0);                 /* #FFFFFF */
+    --card-foreground:    oklch(0.145 0 0);
+    --popover:    oklch(1 0 0);
+    --popover-foreground:    oklch(0.145 0 0);
+    --primary:    oklch(0.546 0.245 262.881); /* #2563EB blue */
+    --primary-foreground:    oklch(0.985 0 0);
+    --secondary:    oklch(0.97 0 0);
+    --secondary-foreground:    oklch(0.205 0 0);
+    --muted:    oklch(0.97 0 0);
+    --muted-foreground:    oklch(0.556 0 0);
+    --accent:    oklch(0.97 0 0);
+    --accent-foreground:    oklch(0.205 0 0);
+    --destructive:    oklch(0.577 0.245 27.325); /* red */
+    --border:    oklch(0.922 0 0);
+    --input:    oklch(0.922 0 0);
+    --ring:    oklch(0.546 0.245 262.881);   /* blue ring */
+    --chart-1:    oklch(0.87 0 0);
+    --chart-2:    oklch(0.556 0 0);
+    --chart-3:    oklch(0.439 0 0);
+    --chart-4:    oklch(0.371 0 0);
+    --chart-5:    oklch(0.269 0 0);
+    --radius:    0.625rem;
+    --sidebar:    oklch(1 0 0);              /* white sidebar */
+    --sidebar-foreground:    oklch(0.145 0 0);
+    --sidebar-primary:    oklch(0.546 0.245 262.881);
+    --sidebar-primary-foreground:    oklch(0.985 0 0);
+    --sidebar-accent:    oklch(0.97 0 0);
+    --sidebar-accent-foreground:    oklch(0.205 0 0);
+    --sidebar-border:    oklch(0.922 0 0);
+    --sidebar-ring:    oklch(0.708 0 0);
   }
-}
 
-* { box-sizing: border-box; }
+  .theme {
+    --font-heading:    var(--font-sans);
+    --font-sans:    'Roboto', sans-serif;
+  }
 
-html {
-  background-color: var(--bg-void);
-}
-
-body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-  font-family: "DM Sans", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: "Roboto", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 /* ── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--bg-void); }
-::-webkit-scrollbar-thumb { background: #1E2A3D; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2A3D57; }
-
-/* ── Skeleton shimmer ────────────────────────────────── */
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
-}
-
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--bg-surface) 25%,
-    var(--bg-elevated) 50%,
-    var(--bg-surface) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 8px;
-}
+::-webkit-scrollbar-thumb { background: #C4C4C4; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #A0A0A0; }
 
 /* ── Card hover glow ─────────────────────────────────── */
 .card-hover {
@@ -74,13 +92,12 @@ body {
 }
 .card-hover:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
 /* ── Ticker glow ─────────────────────────────────────── */
 .ticker-glow:hover {
-  color: #60a5fa;
-  text-shadow: 0 0 16px rgba(59,130,246,0.5);
+  color: #2563EB;
 }
 
 /* ── Pulse ring (for EXIT alerts) ────────────────────── */
@@ -98,6 +115,6 @@ body {
 }
 
 /* ── Subtle glow on signal cards ─────────────────────── */
-.glow-green { box-shadow: 0 0 0 1px rgba(16,185,129,0.12), 0 4px 20px rgba(16,185,129,0.06); }
-.glow-red   { box-shadow: 0 0 0 1px rgba(244,63,94,0.12),  0 4px 20px rgba(244,63,94,0.06);  }
-.glow-amber { box-shadow: 0 0 0 1px rgba(245,158,11,0.12), 0 4px 20px rgba(245,158,11,0.06); }
+.glow-green { box-shadow: 0 0 0 1px rgba(22,163,74,0.18), 0 4px 12px rgba(22,163,74,0.08); }
+.glow-red   { box-shadow: 0 0 0 1px rgba(220,38,38,0.18), 0 4px 12px rgba(220,38,38,0.08); }
+.glow-amber { box-shadow: 0 0 0 1px rgba(217,119,6,0.18), 0 4px 12px rgba(217,119,6,0.08); }

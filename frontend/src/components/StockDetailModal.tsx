@@ -10,6 +10,10 @@ import api from "../api/client";
 import type { Signal } from "../hooks/useSignals";
 import { useLiveQuotes } from "../hooks/useLivePrice";
 import { ConfidenceMeter } from "./ConfidenceMeter";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -69,18 +73,26 @@ const DC_WICK: Record<DannyColor, string> = {
   YELLOW: "#F9A825",
 };
 
-const BG     = "#0a0e1a";
-const TEXT   = "#94a3b8";
-const GRID   = "rgba(255,255,255,0.04)";
-const BORDER = "rgba(255,255,255,0.08)";
+const BG     = "#FFFFFF";
+const TEXT   = "#64748B";
+const GRID   = "rgba(0,0,0,0.05)";
+const BORDER = "rgba(0,0,0,0.10)";
 
-const SIGNAL_CFG = {
-  STRONG_BUY:  { label: "STRONG BUY",  cls: "bg-accent-green/20 text-accent-green border-accent-green/40" },
-  BUY:         { label: "BUY",         cls: "bg-accent-green/10 text-accent-green border-accent-green/30" },
-  HOLD:        { label: "HOLD",        cls: "bg-accent-amber/10 text-accent-amber border-accent-amber/30" },
-  SELL:        { label: "SELL",        cls: "bg-accent-red/10 text-accent-red border-accent-red/30" },
-  STRONG_SELL: { label: "STRONG SELL", cls: "bg-accent-red/20 text-accent-red border-accent-red/40" },
-} as const;
+const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
+  STRONG_BUY: "strongBuy",
+  BUY: "buy",
+  HOLD: "hold",
+  SELL: "sell",
+  STRONG_SELL: "strongSell",
+};
+
+const SIGNAL_LABEL: Record<string, string> = {
+  STRONG_BUY: "STRONG BUY",
+  BUY: "BUY",
+  HOLD: "HOLD",
+  SELL: "SELL",
+  STRONG_SELL: "STRONG SELL",
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -116,7 +128,6 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         setSignal(r.signal);
         setSignalRefreshed(r.refreshed);
         setSignalWarnings(r.validation_warnings);
-        // Invalidate every view so Watchlist, Dashboard, and Scanner stay in sync
         queryClient.invalidateQueries({ queryKey: ["signals"] });
         queryClient.invalidateQueries({ queryKey: ["scanner-results"] });
       } catch {
@@ -192,7 +203,6 @@ export function StockDetailModal({ ticker, onClose }: Props) {
     const rsi  = makeChart(rsiRef.current,  true);
 
     // ── Danny Cheng candlesticks — one series per color ──────────────────────
-    // Build date→color lookup; fall back to BLUE if no Danny data yet
     const colorByTime = new Map<string, DannyColor>();
     for (const { time, color } of (data.danny_colors ?? [])) colorByTime.set(time, color);
 
@@ -201,7 +211,6 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       groups[colorByTime.get(c.time) ?? "BLUE"].push(c);
     }
 
-    // First non-empty series hosts the price lines
     let priceSeries: ReturnType<typeof main.addCandlestickSeries> | null = null;
     for (const colorName of ["BLUE", "CYAN", "RED", "YELLOW"] as DannyColor[]) {
       if (!groups[colorName].length) continue;
@@ -325,11 +334,11 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
       tooltip.innerHTML = `
         <div style="border-left:3px solid ${clr};padding-left:8px">
-          <div style="color:#f1f5f9;font-size:12px;font-weight:600">${timeframe === "D" ? `${weekday}, ` : ""}${dateLabel}</div>
+          <div style="color:#1A1A2E;font-size:12px;font-weight:600">${timeframe === "D" ? `${weekday}, ` : ""}${dateLabel}</div>
           <div style="color:var(--text-disabled);font-size:10px;margin-top:1px">${subLabel}</div>
         </div>
-        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:11px;font-family:'DM Mono',monospace">
-          <div><span style="color:var(--text-disabled)">O</span>&nbsp;<span style="color:#f1f5f9">${fmt(candle.open)}</span></div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:11px;font-family:'Roboto Mono',monospace">
+          <div><span style="color:var(--text-disabled)">O</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.open)}</span></div>
           <div><span style="color:var(--text-disabled)">H</span>&nbsp;<span style="color:#22c55e">${fmt(candle.high)}</span></div>
           <div><span style="color:var(--text-disabled)">C</span>&nbsp;<span style="color:${clr}">${fmt(candle.close)}</span></div>
           <div><span style="color:var(--text-disabled)">L</span>&nbsp;<span style="color:#ef4444">${fmt(candle.low)}</span></div>
@@ -368,7 +377,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
   const changePct = liveQuote?.change_pct ?? null;
 
   // ── Derived UI state ──────────────────────────────────────────────────────────
-  const cfg          = signal ? (SIGNAL_CFG[signal.signal] ?? SIGNAL_CFG.HOLD) : null;
+  const badgeVariant = signal ? (SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold") : null;
+  const badgeLabel   = signal ? (SIGNAL_LABEL[signal.signal] ?? "HOLD") : null;
   const confidence   = signal?.confidence ?? 0;
   const currentPrice = livePrice ?? (signal?.raw_indicators?.current_price as number | undefined) ?? null;
   const smaLabels    = data?.sma_labels ?? ["SMA 20", "SMA 50", "SMA 200"];
@@ -382,11 +392,13 @@ export function StockDetailModal({ ticker, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.08] bg-bg-secondary shrink-0">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.10] bg-bg-secondary shrink-0">
 
         {/* Left: close + ticker + price + signal badge */}
         <div className="flex items-center gap-4">
-          <button onClick={handleClose} className="text-text-tertiary hover:text-text-primary transition-colors text-lg leading-none">✕</button>
+          <Button variant="ghost" size="icon-xs" onClick={handleClose} className="text-text-tertiary hover:text-text-primary text-lg leading-none">
+            ✕
+          </Button>
           <div className="flex items-baseline gap-2.5">
             <span className="font-mono text-xl font-semibold text-text-primary">{ticker}</span>
             {currentPrice != null && (
@@ -398,21 +410,32 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               </span>
             )}
           </div>
-          {cfg && (
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>
+          {badgeVariant && (
+            <Badge variant={badgeVariant} className="text-xs font-semibold">
+              {badgeLabel}
+            </Badge>
           )}
         </div>
 
         {/* Center: D / W / M toggle */}
-        <div className="flex items-center gap-1 bg-bg-tertiary rounded-lg p-1">
+        <ToggleGroup
+          type="single"
+          value={timeframe}
+          onValueChange={(v) => v && setTimeframe(v as Timeframe)}
+          className="bg-bg-tertiary rounded-lg p-1"
+        >
           {(["D", "W", "M"] as Timeframe[]).map(tf => (
-            <button key={tf} onClick={() => setTimeframe(tf)}
+            <ToggleGroupItem
+              key={tf}
+              value={tf}
               className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 timeframe === tf ? "bg-accent-blue text-white shadow" : "text-text-tertiary hover:text-text-secondary"
               }`}
-            >{tf}</button>
+            >
+              {tf}
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
 
         {/* Right: SMA legend */}
         <div className="hidden lg:flex items-center gap-4 text-xs text-text-tertiary">
@@ -427,10 +450,12 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
       {/* Data quality warning */}
       {(signal?.raw_indicators?.data_warning || liveQuote?.data_warning) && (
-        <div className="mx-5 mt-3 px-4 py-2.5 rounded-lg border text-xs leading-relaxed bg-accent-amber/10 border-accent-amber/25 text-accent-amber">
-          <span className="font-semibold">⚠ This ticker's data may be stale or incorrect:</span>{" "}
-          {((liveQuote?.data_warning ?? signal?.raw_indicators?.data_warning) as string[]).join(" · ")}
-        </div>
+        <Alert className="mx-5 mt-3 rounded-lg bg-accent-amber/10 border-accent-amber/25 text-accent-amber">
+          <AlertDescription className="text-xs leading-relaxed">
+            <span className="font-semibold">⚠ This ticker's data may be stale or incorrect:</span>{" "}
+            {((liveQuote?.data_warning ?? signal?.raw_indicators?.data_warning) as string[]).join(" · ")}
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
@@ -442,7 +467,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
           {/* Loading overlay */}
           {isFetching && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60 backdrop-blur-[2px]">
-              <div className="flex items-center gap-2.5 bg-bg-secondary border border-white/[0.08] rounded-xl px-4 py-2.5 shadow-xl">
+              <div className="flex items-center gap-2.5 bg-bg-secondary border border-black/[0.10] rounded-xl px-4 py-2.5 shadow-xl">
                 <div className="w-4 h-4 border-2 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
                 <span className="text-text-secondary text-xs">{TF_CONFIG[timeframe].label} data…</span>
               </div>
@@ -463,27 +488,27 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     display: "none",
                     position: "absolute",
                     pointerEvents: "none",
-                    background: "rgba(10,14,26,0.93)",
-                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "rgba(255,255,255,0.96)",
+                    border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: "8px",
                     padding: "10px 12px",
                     backdropFilter: "blur(8px)",
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.6)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
                     zIndex: 20,
                     minWidth: "155px",
                   }}
                 />
               </div>
-              <div className="h-px bg-white/[0.06] shrink-0" />
+              <div className="h-px bg-black/[0.04] shrink-0" />
               <div ref={volRef}  className="flex-[3]" />
-              <div className="h-px bg-white/[0.06] shrink-0" />
+              <div className="h-px bg-black/[0.04] shrink-0" />
               <div ref={rsiRef}  className="flex-[4]" />
             </>
           )}
         </div>
 
         {/* ── Signal panel ─────────────────────────────────────────────────── */}
-        <div className="w-80 border-l border-white/[0.08] bg-bg-secondary flex flex-col overflow-y-auto shrink-0">
+        <div className="w-80 border-l border-black/[0.10] bg-bg-secondary flex flex-col overflow-y-auto shrink-0">
           {signalLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
               <div className="w-6 h-6 border-2 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
@@ -494,15 +519,17 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
               {/* Stale / validation-fail banner */}
               {!signalRefreshed && signalWarnings && (
-                <div className="px-3 py-3 rounded-lg border-2 border-accent-red/40 bg-accent-red/10">
-                  <div className="text-accent-red text-xs font-bold uppercase tracking-wider mb-1">Could not refresh</div>
-                  <p className="text-accent-red/80 text-xs leading-relaxed">{signalWarnings.join(" · ")}</p>
-                  {signal.generated_at && (
-                    <p className="text-text-tertiary text-[10px] mt-1.5">
-                      Showing last known signal from {new Date(signal.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </p>
-                  )}
-                </div>
+                <Alert className="px-3 py-3 rounded-lg border-2 border-accent-red/40 bg-accent-red/10">
+                  <AlertDescription>
+                    <div className="text-accent-red text-xs font-bold uppercase tracking-wider mb-1">Could not refresh</div>
+                    <p className="text-accent-red/80 text-xs leading-relaxed">{signalWarnings.join(" · ")}</p>
+                    {signal.generated_at && (
+                      <p className="text-text-tertiary text-[10px] mt-1.5">
+                        Showing last known signal from {new Date(signal.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
               )}
 
               {/* Fresh indicator */}
@@ -592,7 +619,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               {/* Claude context read */}
               <div>
                 {contextState === "idle" && (
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={async () => {
                       setContextState("loading");
                       try {
@@ -603,10 +631,10 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       }
                       setContextState("done");
                     }}
-                    className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 transition-colors"
+                    className="w-full border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 text-xs font-semibold"
                   >
                     ✦ Get context read
-                  </button>
+                  </Button>
                 )}
                 {contextState === "loading" && (
                   <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
@@ -630,7 +658,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               {/* Claude chart analysis */}
               <div>
                 {chartAnalysisState === "idle" && (
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={async () => {
                       setChartAnalysisState("loading");
                       try {
@@ -641,10 +670,10 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       }
                       setChartAnalysisState("done");
                     }}
-                    className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 transition-colors"
+                    className="w-full border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 text-xs font-semibold"
                   >
                     ✦ Analyze the charts
-                  </button>
+                  </Button>
                 )}
                 {chartAnalysisState === "loading" && (
                   <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
@@ -663,12 +692,14 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                         {chartAnalysisText ?? "Chart analysis unavailable right now"}
                       </p>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => { setChartAnalysisState("idle"); setChartAnalysisText(null); }}
-                      className="w-full mt-1.5 px-3 py-1.5 text-[10px] text-text-tertiary hover:text-accent-purple transition-colors"
+                      className="w-full mt-1.5 text-[10px] text-text-tertiary hover:text-accent-purple"
                     >
                       Re-run analysis
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
@@ -676,7 +707,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               {/* Claude setup review */}
               <div>
                 {setupReviewState === "idle" && (
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={async () => {
                       setSetupReviewState("loading");
                       try {
@@ -687,10 +719,10 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       }
                       setSetupReviewState("done");
                     }}
-                    className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 transition-colors"
+                    className="w-full border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 text-xs font-semibold"
                   >
                     ✦ Get setup review
-                  </button>
+                  </Button>
                 )}
                 {setupReviewState === "loading" && (
                   <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
@@ -709,12 +741,14 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                         {setupReviewText ?? "Setup review unavailable right now"}
                       </p>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => { setSetupReviewState("idle"); setSetupReviewText(null); }}
-                      className="w-full mt-1.5 px-3 py-1.5 text-[10px] text-text-tertiary hover:text-accent-purple transition-colors"
+                      className="w-full mt-1.5 text-[10px] text-text-tertiary hover:text-accent-purple"
                     >
                       Re-run review
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
@@ -725,10 +759,12 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                   <div className="text-text-tertiary text-xs uppercase tracking-wider mb-2">Risk Factors</div>
                   <div className="space-y-1.5">
                     {signal.risk_factors.map((r, i) => (
-                      <div key={i} className="flex gap-2 text-xs text-accent-amber/80 bg-accent-amber/5 border border-accent-amber/15 rounded-lg px-2.5 py-2">
-                        <span className="shrink-0">⚠</span>
-                        <span className="leading-relaxed">{r}</span>
-                      </div>
+                      <Alert key={i} className="bg-accent-amber/5 border-accent-amber/15 px-2.5 py-2">
+                        <AlertDescription className="flex gap-2 text-xs text-accent-amber/80">
+                          <span className="shrink-0">⚠</span>
+                          <span className="leading-relaxed">{r}</span>
+                        </AlertDescription>
+                      </Alert>
                     ))}
                   </div>
                 </div>

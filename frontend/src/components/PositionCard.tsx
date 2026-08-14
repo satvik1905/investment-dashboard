@@ -2,7 +2,12 @@ import React, { useState } from "react";
 import type { Position } from "../hooks/usePositions";
 import { useClosePosition } from "../hooks/usePositions";
 import { useLiveQuotes } from "../hooks/useLivePrice";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Props {
   position: Position;
@@ -44,12 +49,12 @@ export function PositionCard({ position, style }: Props) {
     ? "border-orange-500/20"
     : targetHit
     ? "border-accent-green/30"
-    : "border-[rgba(255,255,255,0.07)]";
+    : "border-[rgba(0,0,0,0.08)]";
 
   return (
-    <div
+    <Card
       className={cn(
-        "relative bg-bg-secondary rounded-card border card-hover",
+        "relative bg-bg-secondary rounded-card border card-hover p-0",
         borderCls,
       )}
       style={style}
@@ -62,7 +67,7 @@ export function PositionCard({ position, style }: Props) {
                               "bg-gradient-to-r from-accent-blue/40 to-transparent",
       )} />
 
-      <div className="p-5">
+      <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -76,19 +81,17 @@ export function PositionCard({ position, style }: Props) {
 
           {/* P&L badge */}
           {pnl !== null && (
-            <div className={cn(
-              "px-3 py-1.5 rounded-lg border text-right",
-              pnlPos
-                ? "bg-accent-green/10 border-accent-green/20"
-                : "bg-accent-red/10 border-accent-red/20",
-            )}>
+            <Badge
+              variant={pnlPos ? "win" : "loss"}
+              className="h-auto px-3 py-1.5 rounded-lg text-right flex flex-col items-end"
+            >
               <div className={cn("font-mono text-sm font-semibold", pnlPos ? "text-accent-green" : "text-accent-red")}>
                 {pnlPos ? "+" : ""}${pnl.toFixed(2)}
               </div>
               <div className={cn("font-mono text-[10px]", pnlPos ? "text-accent-green/70" : "text-accent-red/70")}>
                 {pnlPos ? "+" : ""}{pnlPct!.toFixed(2)}%
               </div>
-            </div>
+            </Badge>
           )}
         </div>
 
@@ -133,40 +136,45 @@ export function PositionCard({ position, style }: Props) {
 
         {/* Data quality warning */}
         {liveQuote?.data_warning && (
-          <div
-            className="mb-3 px-3 py-2 rounded-lg border text-[11px] leading-relaxed bg-accent-amber/10 border-accent-amber/25 text-accent-amber"
+          <Alert
+            className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed bg-accent-amber/10 border-accent-amber/25 text-accent-amber"
             title={(liveQuote.data_warning as string[]).join("\n")}
           >
-            <span className="font-semibold">⚠ Data quality issue</span> — {(liveQuote.data_warning as string[])[0]}
-          </div>
+            <AlertDescription>
+              <span className="font-semibold">⚠ Data quality issue</span> — {(liveQuote.data_warning as string[])[0]}
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Alert messages */}
         {(stopHit || nearStop || targetHit) && (
-          <div className={cn(
-            "mb-3 px-3 py-2 rounded-lg border text-[11px]",
+          <Alert className={cn(
+            "mb-3 px-3 py-2 rounded-lg text-[11px]",
             stopHit   ? "bg-accent-red/10 border-accent-red/25 text-accent-red" :
             nearStop  ? "bg-orange-500/10 border-orange-500/25 text-orange-400" :
                         "bg-accent-green/10 border-accent-green/25 text-accent-green",
           )}>
-            {stopHit   ? "Stop loss hit — consider exiting position" :
-             nearStop  ? `Price approaching stop loss (${(((currentPrice! - stopLoss!) / stopLoss!) * 100).toFixed(1)}% away)` :
-                         "Target price reached — consider taking profits"}
-          </div>
+            <AlertDescription>
+              {stopHit   ? "Stop loss hit — consider exiting position" :
+               nearStop  ? `Price approaching stop loss (${(((currentPrice! - stopLoss!) / stopLoss!) * 100).toFixed(1)}% away)` :
+                           "Target price reached — consider taking profits"}
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Close form */}
         {showClose && (
           <div className="mb-3 flex gap-2">
-            <input
+            <Input
               type="number"
               step="0.01"
               placeholder="Exit price"
               value={exitPrice}
               onChange={(e) => setExitPrice(e.target.value)}
-              className="flex-1 bg-bg-tertiary text-text-primary font-mono text-sm px-3 py-2 rounded-lg border border-[rgba(255,255,255,0.08)] focus:outline-none focus:border-accent-blue/40 placeholder:text-text-tertiary"
+              className="flex-1 bg-bg-tertiary text-text-primary font-mono text-sm h-9"
             />
-            <button
+            <Button
+              variant="destructive"
               disabled={!exitPrice || closePosition.isPending}
               onClick={() =>
                 closePosition.mutate(
@@ -174,21 +182,22 @@ export function PositionCard({ position, style }: Props) {
                   { onSuccess: () => setShowClose(false) },
                 )
               }
-              className="px-3 py-2 bg-accent-red/20 text-accent-red border border-accent-red/30 rounded-lg text-xs hover:bg-accent-red/30 transition-colors disabled:opacity-50"
+              className="text-xs"
             >
               {closePosition.isPending ? "…" : "Confirm"}
-            </button>
+            </Button>
           </div>
         )}
 
         {/* Actions */}
-        <button
+        <Button
+          variant="outline"
           onClick={() => setShowClose(!showClose)}
-          className="w-full text-xs px-3 py-2 rounded-lg bg-bg-tertiary text-text-secondary border border-[rgba(255,255,255,0.07)] hover:bg-accent-red/10 hover:text-accent-red hover:border-accent-red/20 transition-colors"
+          className="w-full text-xs hover:bg-accent-red/10 hover:text-accent-red hover:border-accent-red/20"
         >
           {showClose ? "Cancel" : "Close Position"}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

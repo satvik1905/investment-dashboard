@@ -443,13 +443,14 @@ python-dotenv==1.0.1
 
 ## 🎨 Frontend Design System
 
-- **Color scheme**: Dark theme (trading app feel)
-- **Primary color**: #1E3A5F (deep navy)
-- **Accent**: #2E75B6 (bright blue)
-- **BUY signal**: Green (#22C55E)
-- **SELL signal**: Red (#EF4444)
-- **HOLD signal**: Amber (#F59E0B)
-- **Font**: Inter
+- **Color scheme**: Light theme (clean, professional)
+- **Base background**: #F5F5F5 (warm light gray)
+- **Cards**: #FFFFFF (pure white)
+- **Accent**: #2563EB (blue-600)
+- **BUY signal**: Green (#16A34A)
+- **SELL signal**: Red (#DC2626)
+- **HOLD signal**: Amber (#D97706)
+- **Font**: DM Sans (body), DM Mono (numbers), Syne (display)
 
 ### Key UI Components
 
@@ -522,11 +523,11 @@ This project uses a **production-grade frontend design approach**. When building
 
 ### Design Direction
 
-SwingIQ is a **professional trading terminal** — the aesthetic should feel like a premium, dark-themed financial tool. Think Bloomberg Terminal meets modern fintech. The design must be:
+SwingIQ is a **professional trading terminal** — the aesthetic should feel like a clean, modern fintech platform. Think Robinhood/Linear meets premium analytics. The design must be:
 
-- **Dark theme** — deep navy/charcoal backgrounds, never white
+- **Light theme** — #F5F5F5 base with white cards, clean and airy
 - **Data-dense but clean** — lots of information, zero clutter
-- **High contrast** — sharp whites and bright accents on dark backgrounds
+- **High contrast** — dark text on light backgrounds, vivid accent colors
 - **Professional and trustworthy** — this handles real money decisions
 
 ### Typography
@@ -540,30 +541,34 @@ SwingIQ is a **professional trading terminal** — the aesthetic should feel lik
 
 ```css
 :root {
-  --bg-primary: #0a0e1a; /* deep navy — main background */
-  --bg-secondary: #0f1629; /* slightly lighter — cards */
-  --bg-tertiary: #1a2035; /* hover states, borders */
-  --accent-blue: #3b82f6; /* primary accent */
-  --accent-green: #22c55e; /* BUY signals, profit */
-  --accent-red: #ef4444; /* SELL signals, loss */
-  --accent-amber: #f59e0b; /* HOLD signals, warnings */
-  --accent-purple: #8b5cf6; /* AI/Claude indicators */
-  --text-primary: #f1f5f9; /* main text */
-  --text-secondary: #94a3b8; /* muted labels */
-  --text-tertiary: #475569; /* disabled/hint text */
-  --border: rgba(255, 255, 255, 0.08);
+  --bg-void: #EBEBEB; /* page edges, scroll area */
+  --bg-base: #F5F5F5; /* main background */
+  --bg-surface: #FFFFFF; /* cards, panels */
+  --bg-elevated: #F7F7F9; /* modals, dropdowns */
+  --accent-blue: #2563EB; /* primary accent */
+  --accent-green: #16A34A; /* BUY signals, profit */
+  --accent-red: #DC2626; /* SELL signals, loss */
+  --accent-amber: #D97706; /* HOLD signals, warnings */
+  --accent-purple: #7C3AED; /* AI/Claude indicators */
+  --text-primary: #1A1A2E; /* main text */
+  --text-secondary: #475569; /* secondary labels */
+  --text-muted: #64748B; /* muted text */
+  --text-disabled: #94A3B8; /* disabled/hint text */
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.20);
 }
 ```
 
 ### Component Aesthetic Rules
 
-- **Cards**: Dark background (`--bg-secondary`), subtle border, `border-radius: 12px`
+- **Cards**: White background (`--bg-surface`), subtle border `rgba(0,0,0,0.06)`, `border-radius: 12px`, soft shadow
 - **Signal badges**: Pill shaped, color-coded — green for BUY, red for SELL, amber for HOLD
 - **Numbers/prices**: Always monospace font, right-aligned
 - **Positive P&L**: `--accent-green` with subtle green background tint
 - **Negative P&L**: `--accent-red` with subtle red background tint
 - **Confidence meter**: Animated radial arc, color shifts red → amber → green
-- **Charts**: Dark background, colored candlesticks, subtle grid lines
+- **Charts**: White background, colored candlesticks, subtle grid lines
 
 ### Motion & Animations
 
@@ -591,8 +596,8 @@ SwingIQ is a **professional trading terminal** — the aesthetic should feel lik
 
 ### What to NEVER Do
 
-- Never use purple gradients on white backgrounds
-- Never use light theme
+- Never use dark theme — this app uses a clean light design
 - Never use boring default Tailwind colors without customization
 - Never make it look like a generic dashboard template
 - Never use Inter, Roboto, or Arial fonts
+- Never use pure white (#FFFFFF) as the page background — always use #F5F5F5 for the base

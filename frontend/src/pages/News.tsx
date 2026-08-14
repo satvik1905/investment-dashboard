@@ -14,6 +14,17 @@ import {
 } from "../hooks/useNews";
 import { NewsArticleRow } from "../components/NewsArticle";
 import { useAppStore } from "../store/appStore";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 // ── Animation variants ────────────────────────────────────────────────────────
 
@@ -41,17 +52,7 @@ function timeAgo(iso: string | null): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] mb-4"
-      style={{ color: "var(--text-muted)" }}>
-      {children}
-    </div>
-  );
-}
-
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-[12px] overflow-hidden ${className}`}
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+    <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] mb-4 text-text-tertiary">
       {children}
     </div>
   );
@@ -59,14 +60,10 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 
 function RefreshButton({ onClick, spinning }: { onClick: () => void; spinning: boolean }) {
   return (
-    <button onClick={onClick}
-      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans"
-      style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+    <Button variant="outline" onClick={onClick}>
       <span className={spinning ? "animate-spin inline-block" : ""}>↻</span>
       Refresh
-    </button>
+    </Button>
   );
 }
 
@@ -90,9 +87,9 @@ function VixCard() {
   if (!vix || vix.current == null) {
     return (
       <Card>
-        <div className="flex items-center justify-center h-40 text-sm font-sans" style={{ color: "var(--text-muted)" }}>
+        <CardContent className="flex items-center justify-center h-40 text-sm font-sans text-text-tertiary">
           VIX unavailable
-        </div>
+        </CardContent>
       </Card>
     );
   }
@@ -101,26 +98,26 @@ function VixCard() {
   const change = vix.change ?? 0;
   const changePct = vix.change_pct ?? 0;
 
-  // VIX up = more fear (red), VIX down = calmer (green) — inverted from stocks
+  // VIX up = more fear (red), VIX down = calmer (green)
   const vixUp = change > 0;
   const changeColor = vixUp ? "text-accent-red" : "text-accent-green";
   const changeArrow = vixUp ? "↑" : "↓";
 
-  // State pill: derived from live value
+  // State pill
   let pillLabel: string;
-  let pillColorClass: string;
+  let pillVariant: "buy" | "warning" | "sell";
   if (current < 15) {
     pillLabel = "Calm";
-    pillColorClass = "bg-accent-blue/15 text-accent-blue border-accent-blue/30";
+    pillVariant = "buy";
   } else if (current < 25) {
     pillLabel = "Elevated";
-    pillColorClass = "bg-accent-amber/15 text-accent-amber border-accent-amber/30";
+    pillVariant = "warning";
   } else {
     pillLabel = "Fear";
-    pillColorClass = "bg-accent-red/15 text-accent-red border-accent-red/30";
+    pillVariant = "sell";
   }
 
-  // Y-axis: fixed for 30d/3m, auto-scaled for 6m/1y
+  // Y-axis
   const useFixedAxis = range === "30d" || range === "3m";
   let yDomain: [number, number];
   let yTicks: number[];
@@ -134,7 +131,6 @@ function VixCard() {
     const floor = Math.max(0, Math.floor(dataMin / 5) * 5);
     const ceil = Math.ceil(dataMax * 1.1 / 5) * 5;
     yDomain = [floor, ceil];
-    // Generate ticks at multiples of 5 or 10 depending on range
     const step = ceil - floor > 40 ? 10 : 5;
     yTicks = [];
     for (let t = floor + step; t <= ceil; t += step) {
@@ -143,41 +139,41 @@ function VixCard() {
   }
 
   return (
-    <Card>
-      <div className="p-5">
+    <Card className="p-0">
+      <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em]"
-              style={{ color: "var(--text-muted)" }}>
+            <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-text-tertiary">
               Volatility · VIX
             </span>
-            <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${pillColorClass}`}>
+            <Badge variant={pillVariant} className="text-[10px] font-mono font-semibold">
               {pillLabel}
-            </span>
+            </Badge>
           </div>
 
           {/* Range presets */}
-          <div className="flex items-center gap-1 bg-bg-secondary border border-white/[0.06] rounded-lg p-0.5">
+          <ToggleGroup
+            type="single"
+            value={range}
+            onValueChange={(v) => v && setRange(v as VixRange)}
+            className="bg-bg-secondary border border-black/[0.08] rounded-lg p-0.5"
+          >
             {VIX_RANGES.map((r) => (
-              <button
+              <ToggleGroupItem
                 key={r.key}
-                onClick={() => setRange(r.key)}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-medium transition-colors ${
-                  range === r.key
-                    ? "bg-bg-tertiary text-text-primary border border-accent-blue/30"
-                    : "text-text-tertiary hover:text-text-secondary border border-transparent"
-                }`}
+                value={r.key}
+                className="px-2.5 py-1 text-[10px] font-mono font-medium"
               >
                 {r.label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
         </div>
 
         {/* Value row */}
         <div className="flex items-baseline gap-3 mb-5">
-          <span className="text-3xl font-mono font-bold" style={{ color: "var(--text-primary)" }}>
+          <span className="text-3xl font-mono font-bold text-text-primary">
             {current.toFixed(2)}
           </span>
           <span className={`text-sm font-mono font-medium ${changeColor}`}>
@@ -189,14 +185,13 @@ function VixCard() {
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={vix.closes} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              {/* Threshold bands: calm 10–15, elevated 15–25, fear 25–45 */}
               <ReferenceArea y1={Math.max(yDomain[0], 10)} y2={15} fill="#3B82F6" fillOpacity={0.05} />
               <ReferenceArea y1={15} y2={25} fill="#F59E0B" fillOpacity={0.05} />
               <ReferenceArea y1={25} y2={Math.min(yDomain[1], 45)} fill="#F43F5E" fillOpacity={0.05} />
 
               <XAxis
                 dataKey="date"
-                tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Mono" }}
+                tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "Roboto Mono" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(d: string) => d.slice(5)}
@@ -205,7 +200,7 @@ function VixCard() {
               />
               <YAxis
                 domain={yDomain}
-                tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "DM Mono" }}
+                tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "Roboto Mono" }}
                 axisLine={false}
                 tickLine={false}
                 width={30}
@@ -213,14 +208,14 @@ function VixCard() {
               />
               <Tooltip
                 contentStyle={{
-                  background: "#111827",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(0,0,0,0.12)",
                   borderRadius: 8,
                   fontSize: 11,
-                  fontFamily: "DM Mono, monospace",
+                  fontFamily: "Roboto Mono, monospace",
                 }}
-                labelStyle={{ color: "#94A3B8" }}
-                itemStyle={{ color: "#F8FAFC" }}
+                labelStyle={{ color: "#475569" }}
+                itemStyle={{ color: "#1A1A2E" }}
                 formatter={(v: number) => [v.toFixed(2), "VIX"]}
                 labelFormatter={(d: string) => d}
               />
@@ -242,7 +237,7 @@ function VixCard() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -257,16 +252,12 @@ function EmptyState() {
         <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"
           stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
       </svg>
-      <p className="text-sm font-sans font-medium" style={{ color: "var(--text-secondary)" }}>
+      <p className="text-sm font-sans font-medium text-text-secondary">
         Add stocks to your signals or positions to see news
       </p>
-      <button onClick={() => setActiveTab("watchlist")}
-        className="px-5 py-2.5 rounded-lg text-sm font-sans font-medium"
-        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-        onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-strong)")}
-        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-default)")}>
+      <Button variant="outline" onClick={() => setActiveTab("watchlist")}>
         Go to Watchlist →
-      </button>
+      </Button>
     </div>
   );
 }
@@ -302,10 +293,10 @@ export function News() {
   const header = (
     <div className="flex items-start justify-between">
       <div>
-        <h1 className="font-display text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
+        <h1 className="font-display text-3xl font-bold text-text-primary">
           News & Sentiment
         </h1>
-        <p className="text-sm font-sans mt-1" style={{ color: "var(--text-muted)" }}>
+        <p className="text-sm font-sans mt-1 text-text-tertiary">
           Market volatility and stock news for your positions
         </p>
       </div>
@@ -340,15 +331,15 @@ export function News() {
       <motion.section custom={1} variants={sectionAnim} initial="hidden" animate="visible">
         <div className="flex items-center justify-between mb-4">
           <SectionLabel>Latest News</SectionLabel>
-          <select
-            value={filterTicker}
-            onChange={(e) => setFilterTicker(e.target.value)}
-            className="text-xs font-sans px-3 py-1.5 rounded-md outline-none"
-            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
-          >
-            <option value="all">All Stocks</option>
-            {tickers.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <Select value={filterTicker} onValueChange={setFilterTicker}>
+            <SelectTrigger className="text-xs font-sans w-auto">
+              <SelectValue placeholder="All Stocks" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Stocks</SelectItem>
+              {tickers.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         {feedLoading ? (
@@ -359,12 +350,12 @@ export function News() {
           </div>
         ) : filtered.length === 0 ? (
           <Card>
-            <div className="flex items-center justify-center h-32 text-sm font-sans" style={{ color: "var(--text-muted)" }}>
+            <CardContent className="flex items-center justify-center h-32 text-sm font-sans text-text-tertiary">
               No recent news found for your stocks.
-            </div>
+            </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card className="p-0 overflow-hidden">
             {filtered.map((article) => (
               <NewsArticleRow
                 key={article.link || article.title}

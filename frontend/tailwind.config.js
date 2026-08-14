@@ -5,36 +5,37 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Backgrounds — map old names to new values
-        "bg-primary":   "#080B12",
-        "bg-secondary": "#111827",
-        "bg-tertiary":  "#161E2E",
+        // Backgrounds — light theme
+        "bg-primary":   "#F5F5F5",
+        "bg-secondary": "#FFFFFF",
+        "bg-tertiary":  "#F0F1F3",
 
         // Signals
-        "accent-blue":   "#3B82F6",
-        "accent-green":  "#10B981",
-        "accent-red":    "#F43F5E",
-        "accent-amber":  "#F59E0B",
-        "accent-purple": "#8B5CF6",
+        "accent-blue":   "#2563EB",
+        "accent-green":  "#16A34A",
+        "accent-red":    "#DC2626",
+        "accent-amber":  "#D97706",
+        "accent-purple": "#7C3AED",
 
         // Text
-        "text-primary":   "#F8FAFC",
-        "text-secondary": "#94A3B8",
-        "text-tertiary":  "#7C8AA0",
-        "text-disabled":  "#475569",
+        "text-primary":   "#1A1A2E",
+        "text-secondary": "#475569",
+        "text-tertiary":  "#64748B",
+        "text-disabled":  "#94A3B8",
+        "text-muted":     "#64748B",
       },
       fontFamily: {
-        display: ['"Syne"', "sans-serif"],
-        mono:    ['"DM Mono"', '"JetBrains Mono"', "monospace"],
-        sans:    ['"DM Sans"', "sans-serif"],
+        display: ['"Roboto"', "sans-serif"],
+        mono:    ['"Roboto Mono"', "monospace"],
+        sans:    ['"Roboto"', "sans-serif"],
       },
       borderRadius: {
         card: "12px",
       },
       boxShadow: {
-        card: "0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2)",
-        "card-hover": "0 4px 24px rgba(0,0,0,0.5)",
-        glow: "0 0 20px rgba(16,185,129,0.15)",
+        card: "0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)",
+        "card-hover": "0 4px 16px rgba(0,0,0,0.08)",
+        glow: "0 0 20px rgba(22,163,74,0.1)",
       },
       animation: {
         "fade-in":    "fadeIn 0.3s ease forwards",

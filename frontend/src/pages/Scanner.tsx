@@ -3,6 +3,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useAppStore } from "../store/appStore";
 import { StockDetailModal } from "../components/StockDetailModal";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +78,7 @@ function formatDateTime(isoDate: string): string {
 function ProgressBar({ progress }: { progress: ScanProgress }) {
   const pct = Math.min(100, Math.max(0, progress.progress));
   return (
-    <div className="bg-bg-secondary rounded-xl border border-white/[0.08] p-6">
+    <div className="bg-bg-secondary rounded-xl border border-black/[0.10] p-6">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-2 h-2 rounded-full bg-accent-blue animate-pulse" />
         <span className="text-text-primary font-mono text-sm font-medium">Scanning market...</span>
@@ -69,12 +86,7 @@ function ProgressBar({ progress }: { progress: ScanProgress }) {
           {progress.tickers_scanned.toLocaleString()} / {progress.total_tickers.toLocaleString()} stocks
         </span>
       </div>
-      <div className="w-full h-2 bg-bg-tertiary rounded-full overflow-hidden mb-3">
-        <div
-          className="h-full bg-accent-blue rounded-full transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <Progress value={pct} className="h-2 mb-3" />
       <div className="flex items-center justify-between">
         <span className="text-text-tertiary text-xs font-mono">{progress.message}</span>
         <span className="text-text-secondary text-xs font-mono font-bold">{pct}%</span>
@@ -114,39 +126,34 @@ function RsiBadge({ rsi, candle_type }: { rsi: number | null; candle_type: "RED"
 
   if (isOversold) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-accent-green/15 border border-accent-green/30 text-accent-green text-xs font-mono font-semibold">
+      <Badge variant="buy" className="text-xs font-mono font-semibold">
         {fmt(rsi, 0)} <span className="text-[10px]">Oversold</span>
-      </span>
+      </Badge>
     );
   }
   if (isOverbought) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-accent-red/15 border border-accent-red/30 text-accent-red text-xs font-mono font-semibold">
+      <Badge variant="sell" className="text-xs font-mono font-semibold">
         {fmt(rsi, 0)} <span className="text-[10px]">Overbought</span>
-      </span>
+      </Badge>
     );
   }
   return <span className="text-text-secondary font-mono text-sm">{fmt(rsi, 0)}</span>;
 }
 
 
-function MonthlyTooltip() {
-  const [show, setShow] = useState(false);
+function MonthlyTooltipInfo() {
   return (
-    <span
-      className="relative inline-flex items-center"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      <span className="text-text-tertiary text-[10px] cursor-help">ⓘ</span>
-      {show && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 z-50 bg-bg-primary border border-white/[0.12] rounded-lg p-3 shadow-xl text-[11px] leading-relaxed text-text-secondary font-sans pointer-events-none">
-          <span className="text-accent-green font-semibold block mb-1">Monthly Red Candles are rare</span>
-          Monthly red candles signal a major trend reversal on the monthly timeframe that could last{" "}
-          <span className="text-text-primary">weeks to months</span>. Far more significant than weekly signals.
-        </div>
-      )}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="text-text-tertiary text-[10px] cursor-help">ⓘ</span>
+      </TooltipTrigger>
+      <TooltipContent className="w-56 text-[11px] leading-relaxed">
+        <span className="text-accent-green font-semibold block mb-1">Monthly Red Candles are rare</span>
+        Monthly red candles signal a major trend reversal on the monthly timeframe that could last{" "}
+        <span className="font-semibold">weeks to months</span>. Far more significant than weekly signals.
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -167,13 +174,13 @@ function ResultRow({
   const isMultiTimeframe = row.candle_type !== "NONE" && row.monthly_candle_color != null;
 
   return (
-    <tr
-      className={`border-b border-white/[0.04] transition-colors hover:bg-bg-tertiary/40 ${
+    <TableRow
+      className={
         isMultiTimeframe ? "bg-yellow-500/[0.03]" : isSpike ? "bg-accent-blue/[0.03]" : ""
-      }`}
+      }
     >
       {/* Ticker */}
-      <td className="py-3 pl-4">
+      <TableCell className="py-3 pl-4">
         <div className="flex items-center gap-2 flex-wrap">
           <span
             onClick={() => onTickerClick(row.ticker)}
@@ -184,14 +191,14 @@ function ResultRow({
             {row.ticker}
           </span>
           {isMultiTimeframe && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 font-mono font-semibold tracking-wide whitespace-nowrap">
+            <Badge variant="warning" className="text-[9px] font-mono font-semibold tracking-wide bg-yellow-500/20 border-yellow-500/40 text-yellow-400">
               ⭐ Multi-TF
-            </span>
+            </Badge>
           )}
           {isSpike && !isMultiTimeframe && (
-            <span className="text-[9px] px-1 py-0.5 rounded bg-accent-blue/20 border border-accent-blue/30 text-accent-blue font-mono uppercase tracking-wider">
+            <Badge variant="outline" className="text-[9px] font-mono uppercase tracking-wider bg-accent-blue/20 border-accent-blue/30 text-accent-blue">
               Vol↑
-            </span>
+            </Badge>
           )}
         </div>
         {row.company_name && (
@@ -208,15 +215,15 @@ function ResultRow({
             )}
           </div>
         )}
-      </td>
+      </TableCell>
 
       {/* Price */}
-      <td className="py-3 text-right pr-4">
+      <TableCell className="py-3 text-right pr-4">
         <span className="font-mono text-sm text-text-primary">{fmtPrice(row.current_price)}</span>
-      </td>
+      </TableCell>
 
       {/* Week % */}
-      <td className="py-3 text-right pr-4">
+      <TableCell className="py-3 text-right pr-4">
         <span
           className={`font-mono text-sm font-medium ${
             changePositive ? "text-accent-green" : "text-accent-red"
@@ -225,10 +232,10 @@ function ResultRow({
           {changePositive ? "+" : ""}
           {fmt(row.weekly_change_pct)}%
         </span>
-      </td>
+      </TableCell>
 
       {/* Prior trend / Recency */}
-      <td className="py-3 pr-4">
+      <TableCell className="py-3 pr-4">
         {isMonthlyView ? (
           <span className="font-mono text-sm text-text-secondary">
             {row.monthly_months_since_flip === 0
@@ -240,10 +247,10 @@ function ResultRow({
         ) : (
           <PriorTrendBar count={row.prior_candle_count} candle_type={row.candle_type} />
         )}
-      </td>
+      </TableCell>
 
       {/* Volume ratio */}
-      <td className="py-3 text-right pr-4">
+      <TableCell className="py-3 text-right pr-4">
         <span
           className={`font-mono text-sm ${
             isSpike ? "text-accent-blue font-semibold" : "text-text-secondary"
@@ -251,25 +258,25 @@ function ResultRow({
         >
           {fmt(row.volume_ratio)}x
         </span>
-      </td>
+      </TableCell>
 
       {/* RSI */}
-      <td className="py-3 pr-4">
+      <TableCell className="py-3 pr-4">
         <RsiBadge rsi={row.rsi} candle_type={row.candle_type} />
-      </td>
+      </TableCell>
 
       {/* Actions */}
-      <td className="py-3 pr-4">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onAddToWatchlist(row.ticker)}
-            className="px-2.5 py-1 rounded-md bg-accent-blue/15 border border-accent-blue/30 text-accent-blue text-xs font-mono font-medium hover:bg-accent-blue/25 transition-colors"
-          >
-            + Add
-          </button>
-        </div>
-      </td>
-    </tr>
+      <TableCell className="py-3 pr-4">
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() => onAddToWatchlist(row.ticker)}
+          className="bg-accent-blue/15 border-accent-blue/30 text-accent-blue hover:bg-accent-blue/25 font-mono"
+        >
+          + Add
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -280,13 +287,13 @@ export function Scanner() {
   const { setActiveTab, setSelectedTicker } = useAppStore();
 
   const [detailTicker, setDetailTicker] = useState<string | null>(null);
-  const [activeCandle, setActiveCandle] = useState<"RED" | "YELLOW" | "MONTHLY_RED" | "MONTHLY_YELLOW">("RED");
-  const [filterMode, setFilterMode] = useState<"all" | "volume_spike" | "strong_reversal">("all");
-  const [sortMode, setSortMode] = useState<"prior_candles" | "volume" | "change">("prior_candles");
+  const [activeCandle, setActiveCandle] = useState<string>("RED");
+  const [filterMode, setFilterMode] = useState<string>("all");
+  const [sortMode, setSortMode] = useState<string>("prior_candles");
   const [scanDateOverride, setScanDateOverride] = useState<string>("");
   const [jobId, setJobId] = useState<string | null>(null);
 
-  // Whether the weekly candle is fully closed — used only for the info badge, not to block runs.
+  // Whether the weekly candle is fully closed
   const isWeeklyCandleClosed = (() => {
     const now = new Date();
     const etNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
@@ -372,7 +379,7 @@ export function Scanner() {
     staleTime: 300_000,
   });
 
-  // Progress polling — only when a job is active
+  // Progress polling
   const { data: progress } = useQuery<ScanProgress | null>({
     queryKey: ["scanner-progress", jobId],
     queryFn: () =>
@@ -406,7 +413,7 @@ export function Scanner() {
     },
   });
 
-  // Generate signal mutation (triggered when user clicks "+ Add")
+  // Generate signal mutation
   const [addError, setAddError] = useState<string | null>(null);
   const generateSignalMutation = useMutation({
     mutationFn: (ticker: string) =>
@@ -457,7 +464,6 @@ export function Scanner() {
 
   const isMonthlyTab = activeCandle === "MONTHLY_RED" || activeCandle === "MONTHLY_YELLOW";
 
-  // True if a scan has ever been completed (latestDate exists) or just finished with 0 results
   const scanWasRun = !!latestDate || progress?.status === "complete";
 
   return (
@@ -485,20 +491,21 @@ export function Scanner() {
               </span>
             )}
             {!isWeeklyCandleClosed && (
-              <span className="text-accent-amber">
+              <Badge variant="warning" className="text-xs">
                 ⚠ Weekly candle still forming — results may be preliminary
-              </span>
+              </Badge>
             )}
           </div>
         </div>
-        <button
+        <Button
+          variant="outline"
           onClick={handleRunScanner}
           disabled={isScanning}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent-green/10 border border-accent-green/25 text-accent-green text-sm font-mono font-medium hover:bg-accent-green/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          className="bg-accent-green/10 border-accent-green/25 text-accent-green hover:bg-accent-green/20 font-mono shrink-0"
         >
           <span className={isScanning ? "animate-spin" : ""}>◎</span>
           {isScanning ? "Scanning..." : "Run Scanner Now"}
-        </button>
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -511,7 +518,7 @@ export function Scanner() {
       {/* No results yet — empty state */}
       {!isScanning && !hasResults && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-full bg-bg-secondary border border-white/[0.08] flex items-center justify-center text-3xl mb-4">
+          <div className="w-16 h-16 rounded-full bg-bg-secondary border border-black/[0.10] flex items-center justify-center text-3xl mb-4">
             {scanWasRun ? "◉" : "◎"}
           </div>
           {scanWasRun ? (
@@ -532,12 +539,13 @@ export function Scanner() {
               </p>
             </>
           )}
-          <button
+          <Button
+            variant="outline"
             onClick={handleRunScanner}
-            className="px-6 py-3 rounded-xl bg-accent-green/10 border border-accent-green/25 text-accent-green text-sm font-mono font-medium hover:bg-accent-green/20 transition-colors"
+            className="bg-accent-green/10 border-accent-green/25 text-accent-green hover:bg-accent-green/20 font-mono"
           >
             Run Scanner Now
-          </button>
+          </Button>
         </div>
       )}
 
@@ -545,102 +553,41 @@ export function Scanner() {
       {(hasResults || isLoading) && !isScanning && (
         <>
           {/* Tabs */}
-          <div className="flex items-center gap-1 mb-4 flex-wrap">
-            {/* Weekly Red */}
-            <button
-              onClick={() => setActiveCandle("RED")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-mono font-medium transition-all ${
-                activeCandle === "RED"
-                  ? "bg-accent-green/15 border border-accent-green/30 text-accent-green"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-accent-green inline-block" />
-              Weekly Red
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-md ${
-                  activeCandle === "RED"
-                    ? "bg-accent-green/20 text-accent-green"
-                    : "bg-bg-tertiary text-text-tertiary"
-                }`}
-              >
-                {redResults.length}
-              </span>
-            </button>
+          <Tabs value={activeCandle} onValueChange={setActiveCandle} className="mb-4">
+            <div className="flex items-center gap-1 flex-wrap">
+              <TabsList variant="line" className="h-auto flex-wrap">
+                <TabsTrigger value="RED" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
+                  <span className="w-2 h-2 rounded-full bg-accent-green inline-block" />
+                  Weekly Red
+                  <Badge variant="outline" className="text-xs">{redResults.length}</Badge>
+                </TabsTrigger>
 
-            {/* Weekly Yellow */}
-            <button
-              onClick={() => setActiveCandle("YELLOW")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-mono font-medium transition-all ${
-                activeCandle === "YELLOW"
-                  ? "bg-accent-amber/15 border border-accent-amber/30 text-accent-amber"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-accent-amber inline-block" />
-              Weekly Yellow
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-md ${
-                  activeCandle === "YELLOW"
-                    ? "bg-accent-amber/20 text-accent-amber"
-                    : "bg-bg-tertiary text-text-tertiary"
-                }`}
-              >
-                {yellowResults.length}
-              </span>
-            </button>
+                <TabsTrigger value="YELLOW" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
+                  <span className="w-2 h-2 rounded-full bg-accent-amber inline-block" />
+                  Weekly Yellow
+                  <Badge variant="outline" className="text-xs">{yellowResults.length}</Badge>
+                </TabsTrigger>
 
-            {/* Divider */}
-            <div className="w-px h-5 bg-white/[0.08] mx-1" />
+                <Separator orientation="vertical" className="h-5 mx-1" />
 
-            {/* Monthly Red */}
-            <button
-              onClick={() => setActiveCandle("MONTHLY_RED")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-mono font-medium transition-all ${
-                activeCandle === "MONTHLY_RED"
-                  ? "bg-accent-green/15 border border-accent-green/30 text-accent-green"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
-              }`}
-            >
-              <span className="text-[11px]">📅</span>
-              Monthly Red
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-md ${
-                  activeCandle === "MONTHLY_RED"
-                    ? "bg-accent-green/20 text-accent-green"
-                    : "bg-bg-tertiary text-text-tertiary"
-                }`}
-              >
-                {monthlyRedResults.length}
-              </span>
-              <MonthlyTooltip />
-            </button>
+                <TabsTrigger value="MONTHLY_RED" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
+                  <span className="text-[11px]">📅</span>
+                  Monthly Red
+                  <Badge variant="outline" className="text-xs">{monthlyRedResults.length}</Badge>
+                  <MonthlyTooltipInfo />
+                </TabsTrigger>
 
-            {/* Monthly Yellow */}
-            <button
-              onClick={() => setActiveCandle("MONTHLY_YELLOW")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-mono font-medium transition-all ${
-                activeCandle === "MONTHLY_YELLOW"
-                  ? "bg-accent-amber/15 border border-accent-amber/30 text-accent-amber"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
-              }`}
-            >
-              <span className="text-[11px]">📅</span>
-              Monthly Yellow
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-md ${
-                  activeCandle === "MONTHLY_YELLOW"
-                    ? "bg-accent-amber/20 text-accent-amber"
-                    : "bg-bg-tertiary text-text-tertiary"
-                }`}
-              >
-                {monthlyYellowResults.length}
-              </span>
-            </button>
-          </div>
+                <TabsTrigger value="MONTHLY_YELLOW" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
+                  <span className="text-[11px]">📅</span>
+                  Monthly Yellow
+                  <Badge variant="outline" className="text-xs">{monthlyYellowResults.length}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </Tabs>
 
           {/* Legend */}
-          <div className="mb-4 p-3 rounded-lg bg-bg-secondary border border-white/[0.06] text-xs text-text-tertiary font-mono leading-relaxed">
+          <div className="mb-4 p-3 rounded-lg bg-bg-secondary border border-black/[0.08] text-xs text-text-tertiary font-mono leading-relaxed">
             {activeCandle === "RED" && (
               <>
                 <span className="text-accent-green font-semibold">● Weekly Red</span> — EMA 13 just crossed{" "}
@@ -675,55 +622,47 @@ export function Scanner() {
 
           {/* Filter bar — weekly tabs only */}
           <div className={`flex items-center gap-2 mb-4 flex-wrap ${isMonthlyTab ? "opacity-40 pointer-events-none" : ""}`}>
-            <div className="flex items-center gap-1 bg-bg-secondary border border-white/[0.06] rounded-lg p-1">
-              {(["all", "volume_spike", "strong_reversal"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilterMode(f)}
-                  className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
-                    filterMode === f
-                      ? "bg-bg-tertiary text-text-primary border border-accent-blue/30"
-                      : "text-text-tertiary hover:text-text-secondary border border-transparent"
-                  }`}
-                >
-                  {f === "all" ? "All" : f === "volume_spike" ? "Volume Spike" : "Strong (5w+)"}
-                </button>
-              ))}
-            </div>
+            <ToggleGroup
+              type="single"
+              value={filterMode}
+              onValueChange={(v) => v && setFilterMode(v)}
+              className="bg-bg-secondary border border-black/[0.08] rounded-lg p-1"
+            >
+              <ToggleGroupItem value="all" className="px-3 py-1 text-xs font-mono">All</ToggleGroupItem>
+              <ToggleGroupItem value="volume_spike" className="px-3 py-1 text-xs font-mono">Volume Spike</ToggleGroupItem>
+              <ToggleGroupItem value="strong_reversal" className="px-3 py-1 text-xs font-mono">Strong (5w+)</ToggleGroupItem>
+            </ToggleGroup>
 
-            <div className="flex items-center gap-1 bg-bg-secondary border border-white/[0.06] rounded-lg p-1">
+            <ToggleGroup
+              type="single"
+              value={sortMode}
+              onValueChange={(v) => v && setSortMode(v)}
+              className="bg-bg-secondary border border-black/[0.08] rounded-lg p-1"
+            >
               <span className="text-text-tertiary text-xs font-mono px-2">Sort:</span>
-              {(["prior_candles", "volume", "change"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSortMode(s)}
-                  className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
-                    sortMode === s
-                      ? "bg-bg-tertiary text-text-primary border border-accent-blue/30"
-                      : "text-text-tertiary hover:text-text-secondary border border-transparent"
-                  }`}
-                >
-                  {s === "prior_candles" ? "Prior Trend" : s === "volume" ? "Volume" : "% Change"}
-                </button>
-              ))}
-            </div>
+              <ToggleGroupItem value="prior_candles" className="px-3 py-1 text-xs font-mono">Prior Trend</ToggleGroupItem>
+              <ToggleGroupItem value="volume" className="px-3 py-1 text-xs font-mono">Volume</ToggleGroupItem>
+              <ToggleGroupItem value="change" className="px-3 py-1 text-xs font-mono">% Change</ToggleGroupItem>
+            </ToggleGroup>
 
             {/* Date picker */}
             <div className="ml-auto flex items-center gap-2">
               <span className="text-text-tertiary text-xs font-mono">View scan from:</span>
-              <input
+              <Input
                 type="date"
                 value={scanDateOverride}
                 onChange={(e) => setScanDateOverride(e.target.value)}
-                className="bg-bg-secondary border border-white/[0.08] rounded-lg px-3 py-1 text-text-secondary text-xs font-mono focus:outline-none focus:border-accent-blue/40"
+                className="bg-bg-secondary text-text-secondary text-xs font-mono w-auto"
               />
               {scanDateOverride && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={() => setScanDateOverride("")}
                   className="text-text-tertiary hover:text-text-secondary text-xs font-mono"
                 >
                   ✕ Clear
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -732,10 +671,7 @@ export function Scanner() {
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-14 rounded-lg bg-bg-secondary border border-white/[0.04] animate-pulse"
-                />
+                <Skeleton key={i} className="h-14 rounded-lg" />
               ))}
             </div>
           ) : activeResults.length === 0 ? (
@@ -743,32 +679,20 @@ export function Scanner() {
               No {activeCandle.toLowerCase()} candle stocks match the current filter.
             </div>
           ) : (
-            <div className="bg-bg-secondary rounded-xl border border-white/[0.08] overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="text-left py-3 pl-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">
-                      Ticker
-                    </th>
-                    <th className="text-right py-3 pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">
-                      Price
-                    </th>
-                    <th className="text-right py-3 pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">
-                      Week %
-                    </th>
-                    <th className="text-left py-3 pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">
-                      Prior Trend
-                    </th>
-                    <th className="text-right py-3 pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">
-                      Volume
-                    </th>
-                    <th className="text-left py-3 pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">
-                      RSI
-                    </th>
-                    <th className="py-3 pr-4" />
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="bg-bg-secondary rounded-xl border border-black/[0.10] overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-left pl-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Ticker</TableHead>
+                    <TableHead className="text-right pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Price</TableHead>
+                    <TableHead className="text-right pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Week %</TableHead>
+                    <TableHead className="text-left pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Prior Trend</TableHead>
+                    <TableHead className="text-right pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Volume</TableHead>
+                    <TableHead className="text-left pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">RSI</TableHead>
+                    <TableHead className="pr-4" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {activeResults.map((row) => (
                     <ResultRow
                       key={row.id}
@@ -778,9 +702,9 @@ export function Scanner() {
                       isMonthlyView={isMonthlyTab}
                     />
                   ))}
-                </tbody>
-              </table>
-              <div className="px-4 py-3 border-t border-white/[0.04] text-text-tertiary text-xs font-mono">
+                </TableBody>
+              </Table>
+              <div className="px-4 py-3 border-t border-black/[0.06] text-text-tertiary text-xs font-mono">
                 {activeResults.length} stocks · scan date: {resolvedDate ?? latestDate ?? "—"}
               </div>
             </div>
@@ -800,7 +724,7 @@ export function Scanner() {
       {addError && (
         <div className="fixed bottom-6 right-6 bg-bg-secondary border border-accent-amber/30 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3 z-40">
           <span className="text-accent-amber text-sm font-mono">⚠ {addError}</span>
-          <button onClick={() => setAddError(null)} className="text-text-tertiary hover:text-text-secondary text-xs ml-2">✕</button>
+          <Button variant="ghost" size="icon-xs" onClick={() => setAddError(null)} className="text-text-tertiary hover:text-text-secondary">✕</Button>
         </div>
       )}
     </div>

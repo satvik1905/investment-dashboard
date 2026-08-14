@@ -4,7 +4,27 @@ import api from "../api/client";
 import type { Signal } from "../hooks/useSignals";
 import type { LiveQuote } from "../hooks/useLivePrice";
 import { TickerAutocomplete } from "./TickerAutocomplete";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,12 +66,20 @@ const SIGNAL_ORDER: Record<string, number> = {
   HOLD: 4,
 };
 
-const SIGNAL_CHIP: Record<string, { label: string; cls: string }> = {
-  STRONG_BUY: { label: "STRONG BUY", cls: "bg-accent-green/15 text-accent-green border-accent-green/25" },
-  BUY:        { label: "BUY",        cls: "bg-accent-green/15 text-accent-green border-accent-green/25" },
-  SELL:       { label: "SELL",       cls: "bg-accent-red/15 text-accent-red border-accent-red/25" },
-  STRONG_SELL:{ label: "STRONG SELL",cls: "bg-accent-red/15 text-accent-red border-accent-red/25" },
-  HOLD:       { label: "HOLD",      cls: "bg-[rgba(255,255,255,0.06)] text-text-tertiary border-[rgba(255,255,255,0.08)]" },
+const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
+  STRONG_BUY: "strongBuy",
+  BUY: "buy",
+  SELL: "sell",
+  STRONG_SELL: "strongSell",
+  HOLD: "hold",
+};
+
+const SIGNAL_LABEL: Record<string, string> = {
+  STRONG_BUY: "STRONG BUY",
+  BUY: "BUY",
+  SELL: "SELL",
+  STRONG_SELL: "STRONG SELL",
+  HOLD: "HOLD",
 };
 
 function isActionable(sig: string): boolean {
@@ -112,7 +140,7 @@ function ConfidenceCell({ value, variant }: { value: number | null; variant: Con
       <span className={cn("font-mono text-xs tabular-nums font-semibold w-6 text-right", confidenceColor(value))}>
         {value}
       </span>
-      <div className="flex-1 h-1 rounded-full bg-[rgba(255,255,255,0.06)] min-w-[40px] max-w-[60px]">
+      <div className="flex-1 h-1 rounded-full bg-[rgba(0,0,0,0.05)] min-w-[40px] max-w-[60px]">
         <div
           className={cn("h-full rounded-full transition-all", confidenceBarColor(value))}
           style={{ width: `${Math.min(value, 100)}%` }}
@@ -173,7 +201,8 @@ function SignalRow({
   const rr = computeRR(signal);
 
   const hold = !isActionable(signal.signal);
-  const chip = SIGNAL_CHIP[signal.signal] ?? SIGNAL_CHIP.HOLD;
+  const badgeVariant = SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold";
+  const badgeLabel = SIGNAL_LABEL[signal.signal] ?? "HOLD";
 
   const handleRefresh = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -193,83 +222,85 @@ function SignalRow({
 
   return (
     <>
-      <tr
+      <TableRow
         onClick={() => onRowClick(signal)}
         className={cn(
-          "cursor-pointer border-b border-[rgba(255,255,255,0.05)] transition-colors hover:bg-[rgba(255,255,255,0.03)]",
+          "cursor-pointer",
           hold && "opacity-[0.55]",
         )}
       >
         {/* Ticker */}
-        <td className="py-2.5 px-3 font-mono text-sm font-semibold text-text-primary ticker-glow whitespace-nowrap">
+        <TableCell className="py-2.5 px-3 font-mono text-sm font-semibold text-text-primary ticker-glow whitespace-nowrap">
           {signal.ticker}
-        </td>
+        </TableCell>
 
         {/* Signal chip */}
-        <td className="py-2.5 px-3">
-          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold border tracking-wide whitespace-nowrap", chip.cls)}>
-            {chip.label}
-          </span>
-        </td>
+        <TableCell className="py-2.5 px-3">
+          <Badge variant={badgeVariant} className="text-[10px] font-bold tracking-wide">
+            {badgeLabel}
+          </Badge>
+        </TableCell>
 
         {/* Price */}
-        <td className={cn(
+        <TableCell className={cn(
           "py-2.5 px-3 font-mono text-xs tabular-nums text-right whitespace-nowrap transition-colors duration-300",
           pulsing ? "text-accent-blue" : "text-text-primary",
         )}>
           {displayPrice !== null ? `$${displayPrice.toFixed(2)}` : "—"}
-        </td>
+        </TableCell>
 
         {/* Change % */}
-        <td className={cn(
+        <TableCell className={cn(
           "py-2.5 px-3 font-mono text-xs tabular-nums text-right whitespace-nowrap",
           changePct !== null && changePct >= 0 ? "text-accent-green" : "text-accent-red",
         )}>
           {changePct !== null ? `${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%` : "—"}
-        </td>
+        </TableCell>
 
         {/* Confidence */}
-        <td className="py-2.5 px-3">
+        <TableCell className="py-2.5 px-3">
           <ConfidenceCell value={signal.confidence} variant={confVariant} />
-        </td>
+        </TableCell>
 
         {/* Entry */}
-        <td className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-text-secondary whitespace-nowrap">
+        <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-text-secondary whitespace-nowrap">
           {entryLow !== null && entryHigh !== null
             ? `$${entryLow.toFixed(2)}–${entryHigh.toFixed(2)}`
             : entryLow !== null
               ? `$${entryLow.toFixed(2)}`
               : "—"}
-        </td>
+        </TableCell>
 
         {/* Target */}
-        <td className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-accent-green whitespace-nowrap">
+        <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-accent-green whitespace-nowrap">
           {target !== null ? `$${target.toFixed(2)}` : "—"}
-        </td>
+        </TableCell>
 
         {/* Stop */}
-        <td className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-accent-red whitespace-nowrap">
+        <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-accent-red whitespace-nowrap">
           {stop !== null ? `$${stop.toFixed(2)}` : "—"}
-        </td>
+        </TableCell>
 
         {/* R:R */}
-        <td className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-text-secondary whitespace-nowrap">
+        <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-text-secondary whitespace-nowrap">
           {rr !== null ? `${rr.toFixed(1)}:1` : "—"}
-        </td>
+        </TableCell>
 
         {/* Key reason */}
-        <td className="py-2.5 px-3 text-xs text-text-secondary max-w-[180px] truncate" title={signal.key_reason ?? ""}>
+        <TableCell className="py-2.5 px-3 text-xs text-text-secondary max-w-[180px] truncate" title={signal.key_reason ?? ""}>
           {signal.key_reason ?? "—"}
-        </td>
+        </TableCell>
 
         {/* Actions */}
-        <td className="py-2.5 px-3">
+        <TableCell className="py-2.5 px-3">
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={handleRefresh}
               disabled={refreshing}
               title="Refresh signal"
-              className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 transition-all disabled:opacity-40"
+              className="text-text-muted hover:text-accent-blue hover:bg-accent-blue/10"
             >
               {refreshing ? (
                 <span className="w-3 h-3 border-[1.5px] border-accent-blue/30 border-t-accent-blue rounded-full animate-spin block" />
@@ -278,60 +309,56 @@ function SignalRow({
                   <path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 3.12 1.5M10 2v2.5H7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               )}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={handleDeleteClick}
               title="Remove from watchlist"
-              className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-accent-red hover:bg-accent-red/10 transition-all"
+              className="text-text-muted hover:text-accent-red hover:bg-accent-red/10"
             >
               <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                 <path d="M2 3h8M5 3V2h2v1M3 3l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-            </button>
+            </Button>
           </div>
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
 
       {/* Delete confirmation modal */}
-      {showDeleteModal && (
-        <tr>
-          <td colSpan={11} className="p-0">
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
-              <div className="relative z-10 w-80 bg-bg-secondary border border-[rgba(255,255,255,0.1)] rounded-2xl p-6 shadow-2xl">
-                <div className="flex items-center justify-center w-11 h-11 rounded-full bg-accent-red/10 border border-accent-red/20 mx-auto mb-4">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M3 5h14M8 5V3.5h4V5M4 5l1 12h10l1-12" stroke="#F43F5E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <h3 className="text-text-primary font-semibold text-center text-sm mb-1">
-                  Remove {signal.ticker}?
-                </h3>
-                <p className="text-text-tertiary text-xs text-center leading-relaxed mb-5">
-                  This will remove <span className="font-mono text-text-secondary">{signal.ticker}</span> from your watchlist.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowDeleteModal(false)}
-                    className="flex-1 py-2.5 rounded-xl border border-[rgba(255,255,255,0.08)] text-text-secondary text-sm hover:bg-bg-tertiary transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { onRemove(signal.ticker); setShowDeleteModal(false); }}
-                    className="flex-1 py-2.5 rounded-xl bg-accent-red/15 border border-accent-red/30 text-accent-red text-sm hover:bg-accent-red/25 transition-colors"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="w-80" showCloseButton={false} onClick={(e) => e.stopPropagation()}>
+          <DialogHeader className="items-center">
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-accent-red/10 border border-accent-red/20 mb-2">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M3 5h14M8 5V3.5h4V5M4 5l1 12h10l1-12" stroke="#F43F5E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-          </td>
-        </tr>
-      )}
+            <DialogTitle className="text-text-primary text-center text-sm">
+              Remove {signal.ticker}?
+            </DialogTitle>
+            <DialogDescription className="text-text-tertiary text-xs text-center leading-relaxed">
+              This will remove <span className="font-mono text-text-secondary">{signal.ticker}</span> from your watchlist.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => { onRemove(signal.ticker); setShowDeleteModal(false); }}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -469,46 +496,48 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove, tickerInpu
               <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
               <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
-            <input
+            <Input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter tickers..."
-              className="w-full pl-9 pr-3 py-2 rounded-lg bg-bg-secondary border border-[rgba(255,255,255,0.07)] text-text-primary text-xs font-mono placeholder:text-text-tertiary focus:outline-none focus:border-accent-blue/40 transition-colors"
+              className="w-full pl-9 pr-3 py-2 bg-bg-secondary text-text-primary text-xs font-mono placeholder:text-text-tertiary"
             />
           </div>
 
           {(["BUY", "SELL", "HOLD"] as SignalFilter[]).map((f) => {
             const active = filterActive(f);
             const colors: Record<SignalFilter, { on: string; off: string }> = {
-              BUY:  { on: "bg-accent-green/15 text-accent-green border-accent-green/25", off: "text-text-tertiary border-[rgba(255,255,255,0.06)]" },
-              SELL: { on: "bg-accent-red/15 text-accent-red border-accent-red/25",       off: "text-text-tertiary border-[rgba(255,255,255,0.06)]" },
-              HOLD: { on: "bg-[rgba(255,255,255,0.08)] text-text-secondary border-[rgba(255,255,255,0.1)]", off: "text-text-tertiary border-[rgba(255,255,255,0.06)]" },
+              BUY:  { on: "bg-accent-green/15 text-accent-green border-accent-green/25", off: "text-text-tertiary border-[rgba(0,0,0,0.08)]" },
+              SELL: { on: "bg-accent-red/15 text-accent-red border-accent-red/25",       off: "text-text-tertiary border-[rgba(0,0,0,0.08)]" },
+              HOLD: { on: "bg-[rgba(0,0,0,0.06)] text-text-secondary border-[rgba(0,0,0,0.10)]", off: "text-text-tertiary border-[rgba(0,0,0,0.08)]" },
             };
             const cls = filters.size === 0
               ? colors[f].on
               : active ? colors[f].on : colors[f].off;
             return (
-              <button
+              <Badge
                 key={f}
-                onClick={() => toggleFilter(f)}
                 className={cn(
-                  "px-2.5 py-1 rounded-full text-[10px] font-bold border tracking-wide transition-all",
+                  "cursor-pointer text-[10px] font-bold tracking-wide transition-all",
                   cls,
                 )}
+                onClick={() => toggleFilter(f)}
               >
                 {f}
-              </button>
+              </Badge>
             );
           })}
 
-          <button
+          <Button
+            variant="outline"
+            size="icon-xs"
             onClick={() => setConfVariant((v) => (v === "number" ? "bar" : "number"))}
             title={`Confidence: ${confVariant === "number" ? "number only" : "number + bar"}`}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-[rgba(255,255,255,0.05)] transition-all text-[10px] font-mono border border-[rgba(255,255,255,0.06)]"
+            className="text-[10px] font-mono"
           >
             {confVariant === "number" ? "#" : "▬"}
-          </button>
+          </Button>
         </div>
 
         {/* RIGHT — add zone */}
@@ -521,69 +550,65 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove, tickerInpu
             disabled={addPending}
             placeholder="Add ticker..."
           />
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onAddSubmit}
             disabled={!tickerInput.trim() || addPending}
-            className={cn(
-              "px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all",
-              "bg-accent-green/10 hover:bg-accent-green/20 border-accent-green/30 text-accent-green",
-              "disabled:opacity-40 disabled:cursor-not-allowed",
-            )}
+            className="bg-accent-green/10 hover:bg-accent-green/20 border-accent-green/30 text-accent-green"
           >
             {addPending ? (
               <span className="w-3 h-3 border-[1.5px] border-accent-green/30 border-t-accent-green rounded-full animate-spin block" />
             ) : (
               <span className="text-sm leading-none font-light">+</span>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-[rgba(255,255,255,0.07)] bg-bg-secondary overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-[rgba(255,255,255,0.1)]">
-                {COLS.map((col) => (
-                  <th
-                    key={col.key}
-                    onClick={() => handleSort(col.key)}
-                    className={cn(
-                      "py-2.5 px-3 text-[10px] font-semibold uppercase tracking-widest font-mono text-text-tertiary cursor-pointer select-none hover:text-text-secondary transition-colors whitespace-nowrap sticky top-0 bg-bg-secondary z-10",
-                      col.align,
-                    )}
-                  >
-                    {col.label}
-                    <SortArrow active={sortKey === col.key} dir={sortDir} />
-                  </th>
-                ))}
-                {/* Actions header */}
-                <th className="py-2.5 px-3 w-16 sticky top-0 bg-bg-secondary z-10" />
-              </tr>
-            </thead>
-            <tbody>
-              {processed.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="py-10 text-center text-text-tertiary text-sm">
-                    {search || filters.size > 0 ? "No signals match your filter." : "No signals yet."}
-                  </td>
-                </tr>
-              ) : (
-                processed.map((signal) => (
-                  <SignalRow
-                    key={signal.id}
-                    signal={signal}
-                    quote={quotes[signal.ticker]}
-                    confVariant={confVariant}
-                    onRowClick={onRowClick}
-                    onRemove={onRemove}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-bg-secondary overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-[rgba(0,0,0,0.10)]">
+              {COLS.map((col) => (
+                <TableHead
+                  key={col.key}
+                  onClick={() => handleSort(col.key)}
+                  className={cn(
+                    "py-2.5 px-3 text-[10px] font-semibold uppercase tracking-widest font-mono text-text-tertiary cursor-pointer select-none hover:text-text-secondary transition-colors whitespace-nowrap sticky top-0 bg-bg-secondary z-10",
+                    col.align,
+                  )}
+                >
+                  {col.label}
+                  <SortArrow active={sortKey === col.key} dir={sortDir} />
+                </TableHead>
+              ))}
+              {/* Actions header */}
+              <TableHead className="py-2.5 px-3 w-16 sticky top-0 bg-bg-secondary z-10" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {processed.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={11} className="py-10 text-center text-text-tertiary text-sm">
+                  {search || filters.size > 0 ? "No signals match your filter." : "No signals yet."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              processed.map((signal) => (
+                <SignalRow
+                  key={signal.id}
+                  signal={signal}
+                  quote={quotes[signal.ticker]}
+                  confVariant={confVariant}
+                  onRowClick={onRowClick}
+                  onRemove={onRemove}
+                />
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

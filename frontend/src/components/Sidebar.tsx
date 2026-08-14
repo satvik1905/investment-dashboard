@@ -1,5 +1,6 @@
 import { useAppStore } from "../store/appStore";
 import { useLiveQuotes } from "../hooks/useLivePrice";
+import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS = [
   {
@@ -82,7 +83,7 @@ function MarketStatus() {
     : "Loading…";
 
   return (
-    <div className="px-5 py-4 border-t border-[rgba(255,255,255,0.05)]">
+    <div className="px-5 py-4 border-t border-[rgba(0,0,0,0.06)]">
       <div className="hidden md:flex items-center gap-2">
         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
         <span className="text-text-tertiary text-[10px] tracking-widest uppercase font-mono">{label}</span>
@@ -98,10 +99,10 @@ export function Sidebar() {
 
   return (
     <aside
-      className="w-14 md:w-[220px] bg-bg-primary border-r border-[rgba(255,255,255,0.05)] flex flex-col h-screen sticky top-0 shrink-0"
+      className="w-14 md:w-[220px] bg-bg-secondary border-r border-[rgba(0,0,0,0.06)] flex flex-col h-screen sticky top-0 shrink-0"
     >
       {/* Logo */}
-      <div className="px-4 md:px-5 py-5 border-b border-[rgba(255,255,255,0.05)]">
+      <div className="px-4 md:px-5 py-5 border-b border-[rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-3">
           {/* Diamond logo mark */}
           <div className="w-8 h-8 flex items-center justify-center shrink-0">
@@ -131,15 +132,15 @@ export function Sidebar() {
         {NAV_ITEMS.map((item) => {
           const active = activeTab === item.id;
           return (
-            <button
+            <Button
               key={item.id}
+              variant="ghost"
               onClick={() => setActiveTab(item.id)}
               className={`
-                relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left
-                transition-all duration-150
+                relative w-full flex items-center gap-3 px-3 py-2.5 h-auto rounded-lg justify-start
                 ${active
-                  ? "text-text-primary bg-[rgba(255,255,255,0.06)]"
-                  : "text-text-tertiary hover:text-text-secondary hover:bg-[rgba(255,255,255,0.03)]"
+                  ? "text-text-primary bg-[rgba(0,0,0,0.04)]"
+                  : "text-text-tertiary hover:text-text-secondary hover:bg-[rgba(0,0,0,0.03)]"
                 }
               `}
             >
@@ -153,7 +154,7 @@ export function Sidebar() {
               <span className="hidden md:block text-sm font-medium font-sans">
                 {item.label}
               </span>
-            </button>
+            </Button>
           );
         })}
       </nav>

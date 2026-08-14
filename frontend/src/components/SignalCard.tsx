@@ -3,7 +3,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import type { Signal } from "../hooks/useSignals";
 import type { LiveQuote } from "../hooks/useLivePrice";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Props {
   signal:    Signal;
@@ -24,22 +36,30 @@ const SIGNAL_CFG = {
 
 type SignalColor = "green" | "amber" | "red";
 
-const COLOR_CLASSES: Record<SignalColor, { badge: string; ring: string; glow: string }> = {
+const COLOR_CLASSES: Record<SignalColor, { badge: "buy" | "strongBuy" | "sell" | "strongSell" | "hold"; ring: string; glow: string }> = {
   green: {
-    badge: "bg-accent-green/15 text-accent-green border-accent-green/25",
+    badge: "buy",
     ring:  "border-accent-green/20",
     glow:  "glow-green",
   },
   amber: {
-    badge: "bg-accent-amber/15 text-accent-amber border-accent-amber/25",
+    badge: "hold",
     ring:  "border-accent-amber/20",
     glow:  "glow-amber",
   },
   red: {
-    badge: "bg-accent-red/15 text-accent-red border-accent-red/25",
+    badge: "sell",
     ring:  "border-accent-red/20",
     glow:  "glow-red",
   },
+};
+
+const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
+  STRONG_BUY: "strongBuy",
+  BUY: "buy",
+  HOLD: "hold",
+  SELL: "sell",
+  STRONG_SELL: "strongSell",
 };
 
 // ── Alert detection ───────────────────────────────────────────────────────────
@@ -86,9 +106,9 @@ function AlertStrip({ level, price, stopLoss, targetPrice, entryLow, entryHigh }
   };
   const { cls, text } = configs[level];
   return (
-    <div className={cn("mb-3 px-3 py-2 rounded-lg border text-[11px] leading-relaxed", cls)}>
-      {text}
-    </div>
+    <Alert className={cn("mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed", cls)}>
+      <AlertDescription>{text}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -148,6 +168,9 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
   const sigLabel = stopHit ? "STOP HIT" : targetHit ? "TARGET HIT" : baseCfg.label;
   const colorCls = COLOR_CLASSES[sigColor];
 
+  // Badge variant
+  const badgeVariant = stopHit ? "sell" as const : targetHit ? "strongBuy" as const : SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold" as const;
+
   // Danny Cheng candle label
   const dannyColor: string | undefined = signal.raw_indicators?.danny_current_color as string | undefined;
   const dannyLabel =
@@ -170,14 +193,14 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
   };
 
   return (
-    <div
+    <Card
       className={cn(
         "relative bg-bg-secondary rounded-card border card-hover",
-        "transition-colors duration-200",
+        "transition-colors duration-200 p-0",
         stopHit           ? "border-accent-red/30 " + colorCls.glow :
         targetHit         ? "border-accent-green/30 " + colorCls.glow :
         alertLevel === "near_stop" ? "border-orange-500/20" :
-        "border-[rgba(255,255,255,0.07)] hover:border-[rgba(255,255,255,0.12)]",
+        "border-[rgba(0,0,0,0.08)] hover:border-[rgba(0,0,0,0.14)]",
       )}
       style={style}
     >
@@ -189,7 +212,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
                                "bg-gradient-to-r from-accent-amber/60 to-transparent",
       )} />
 
-      <div className="p-5">
+      <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="min-w-0">
@@ -228,19 +251,18 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
 
           <div className="flex items-center gap-1.5 shrink-0 ml-2">
             {/* Signal badge */}
-            <span className={cn(
-              "px-2.5 py-1 rounded-full text-[10px] font-bold border tracking-wide",
-              colorCls.badge,
-            )}>
+            <Badge variant={badgeVariant} className="text-[10px] font-bold tracking-wide">
               {sigLabel}
-            </span>
+            </Badge>
 
             {/* Refresh */}
-            <button
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={handleRefresh}
               disabled={refreshing}
               title="Refresh signal"
-              className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 transition-all disabled:opacity-40"
+              className="text-text-muted hover:text-accent-blue hover:bg-accent-blue/10"
             >
               {refreshing ? (
                 <span className="w-3 h-3 border-[1.5px] border-accent-blue/30 border-t-accent-blue rounded-full animate-spin block" />
@@ -249,31 +271,35 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
                   <path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 3.12 1.5M10 2v2.5H7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               )}
-            </button>
+            </Button>
 
             {/* Delete */}
             {onRemove && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon-xs"
                 onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
-                className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-accent-red hover:bg-accent-red/10 transition-all"
+                className="text-text-muted hover:text-accent-red hover:bg-accent-red/10"
                 title="Remove from watchlist"
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                   <path d="M2 3h8M5 3V2h2v1M3 3l.5 7h5l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
         {/* Data quality warning */}
         {signal.raw_indicators?.data_warning && (
-          <div
-            className="mb-3 px-3 py-2 rounded-lg border text-[11px] leading-relaxed bg-accent-amber/10 border-accent-amber/25 text-accent-amber"
+          <Alert
+            className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed bg-accent-amber/10 border-accent-amber/25 text-accent-amber"
             title={(signal.raw_indicators.data_warning as string[]).join("\n")}
           >
-            <span className="font-semibold">⚠ Data quality issue</span> — {(signal.raw_indicators.data_warning as string[])[0]}
-          </div>
+            <AlertDescription>
+              <span className="font-semibold">⚠ Data quality issue</span> — {(signal.raw_indicators.data_warning as string[])[0]}
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Alert strip */}
@@ -329,44 +355,42 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
         {dannyLabel && (
           <div className="text-text-muted text-[10px] font-mono mt-1">{dannyLabel}</div>
         )}
-      </div>
+      </CardContent>
 
       {/* Delete modal */}
-      {showDeleteModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
-          <div className="relative z-10 w-80 bg-bg-secondary border border-[rgba(255,255,255,0.1)] rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-accent-red/10 border border-accent-red/20 mx-auto mb-4">
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="w-80" showCloseButton={false} onClick={(e) => e.stopPropagation()}>
+          <DialogHeader className="items-center">
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-accent-red/10 border border-accent-red/20 mb-2">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M3 5h14M8 5V3.5h4V5M4 5l1 12h10l1-12" stroke="#F43F5E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <h3 className="text-text-primary font-semibold text-center text-sm mb-1">
+            <DialogTitle className="text-text-primary text-center text-sm">
               Remove {signal.ticker}?
-            </h3>
-            <p className="text-text-tertiary text-xs text-center leading-relaxed mb-5">
+            </DialogTitle>
+            <DialogDescription className="text-text-tertiary text-xs text-center leading-relaxed">
               This will remove <span className="font-mono text-text-secondary">{signal.ticker}</span> from your watchlist.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2.5 rounded-xl border border-[rgba(255,255,255,0.08)] text-text-secondary text-sm hover:bg-bg-tertiary transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { onRemove!(signal.ticker); setShowDeleteModal(false); }}
-                className="flex-1 py-2.5 rounded-xl bg-accent-red/15 border border-accent-red/30 text-accent-red text-sm hover:bg-accent-red/25 transition-colors"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => { onRemove!(signal.ticker); setShowDeleteModal(false); }}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }

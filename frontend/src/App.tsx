@@ -8,6 +8,16 @@ import { Scanner } from "./pages/Scanner";
 import { Watchlist } from "./pages/Watchlist";
 import { News } from "./pages/News";
 import api, { setAuthKey, clearAuthKey } from "./api/client";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // ── Password gate ────────────────────────────────────────────────────────────
 
@@ -41,32 +51,38 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-bg-primary">
-      <form onSubmit={submit} className="w-full max-w-xs space-y-4">
-        <div className="text-center">
-          <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
+      <Card className="w-full max-w-xs">
+        <CardHeader className="text-center">
+          <CardTitle className="font-display text-2xl font-bold text-text-primary tracking-tight">
             SwingIQ
-          </h1>
-          <p className="text-text-tertiary text-sm mt-1">Enter password to continue</p>
-        </div>
-        <input
-          type="password"
-          autoFocus
-          value={value}
-          onChange={(e) => { setValue(e.target.value); setError(false); }}
-          placeholder="Password"
-          className="w-full bg-bg-secondary text-text-primary font-mono text-sm px-4 py-3 rounded-xl border border-white/[0.08] focus:outline-none focus:border-accent-blue/50 placeholder:text-text-tertiary"
-        />
-        {error && (
-          <p className="text-accent-red text-xs font-mono text-center">Wrong password</p>
-        )}
-        <button
-          type="submit"
-          disabled={checking || !value.trim()}
-          className="w-full py-3 rounded-xl bg-accent-blue/15 border border-accent-blue/30 text-accent-blue text-sm font-mono font-medium hover:bg-accent-blue/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {checking ? "Checking..." : "Unlock"}
-        </button>
-      </form>
+          </CardTitle>
+          <CardDescription className="text-text-tertiary text-sm mt-1">
+            Enter password to continue
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="space-y-4">
+            <Input
+              type="password"
+              autoFocus
+              value={value}
+              onChange={(e) => { setValue(e.target.value); setError(false); }}
+              placeholder="Password"
+              className="bg-bg-secondary text-text-primary font-mono text-sm px-4 py-3 h-auto rounded-xl placeholder:text-text-tertiary"
+            />
+            {error && (
+              <p className="text-accent-red text-xs font-mono text-center">Wrong password</p>
+            )}
+            <Button
+              type="submit"
+              disabled={checking || !value.trim()}
+              className="w-full py-3 h-auto rounded-xl bg-accent-blue/15 border border-accent-blue/30 text-accent-blue text-sm font-mono font-medium hover:bg-accent-blue/25"
+            >
+              {checking ? "Checking..." : "Unlock"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -110,20 +126,26 @@ export default function App() {
   }
 
   if (authState === "locked") {
-    return <PasswordGate onUnlock={() => setAuthState("open")} />;
+    return (
+      <TooltipProvider>
+        <PasswordGate onUnlock={() => setAuthState("open")} />
+      </TooltipProvider>
+    );
   }
 
   return (
-    <div className="flex min-h-screen bg-bg-primary font-sans">
-      <Sidebar />
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        {activeTab === "dashboard" && <Dashboard />}
-        {activeTab === "watchlist" && <Watchlist />}
-        {activeTab === "news" && <News />}
-        {activeTab === "journal" && <Journal />}
-        {activeTab === "scanner" && <Scanner />}
-        {activeTab === "settings" && <Settings />}
-      </main>
-    </div>
+    <TooltipProvider>
+      <div className="flex min-h-screen bg-bg-primary font-sans">
+        <Sidebar />
+        <main className="flex-1 min-w-0 overflow-y-auto">
+          {activeTab === "dashboard" && <Dashboard />}
+          {activeTab === "watchlist" && <Watchlist />}
+          {activeTab === "news" && <News />}
+          {activeTab === "journal" && <Journal />}
+          {activeTab === "scanner" && <Scanner />}
+          {activeTab === "settings" && <Settings />}
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }
