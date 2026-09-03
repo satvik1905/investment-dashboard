@@ -55,7 +55,7 @@ function EmptyState({ message }: { message: string }) {
   return (
     <Card className="flex flex-col items-center justify-center py-14 text-center">
       <CardContent className="flex flex-col items-center">
-        <div className="w-10 h-10 rounded-full border border-[rgba(0,0,0,0.10)] flex items-center justify-center mb-3">
+        <div className="w-10 h-10 rounded-full border border-[rgba(255,255,255,0.08)] flex items-center justify-center mb-3">
           <span className="text-text-muted text-lg">◎</span>
         </div>
         <p className="text-text-tertiary text-sm">{message}</p>

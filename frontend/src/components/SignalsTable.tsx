@@ -140,7 +140,7 @@ function ConfidenceCell({ value, variant }: { value: number | null; variant: Con
       <span className={cn("font-mono text-xs tabular-nums font-semibold w-6 text-right", confidenceColor(value))}>
         {value}
       </span>
-      <div className="flex-1 h-1 rounded-full bg-[rgba(0,0,0,0.05)] min-w-[40px] max-w-[60px]">
+      <div className="flex-1 h-1 rounded-full bg-[rgba(255,255,255,0.05)] min-w-[40px] max-w-[60px]">
         <div
           className={cn("h-full rounded-full transition-all", confidenceBarColor(value))}
           style={{ width: `${Math.min(value, 100)}%` }}
@@ -508,9 +508,9 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove, tickerInpu
           {(["BUY", "SELL", "HOLD"] as SignalFilter[]).map((f) => {
             const active = filterActive(f);
             const colors: Record<SignalFilter, { on: string; off: string }> = {
-              BUY:  { on: "bg-accent-green/15 text-accent-green border-accent-green/25", off: "text-text-tertiary border-[rgba(0,0,0,0.08)]" },
-              SELL: { on: "bg-accent-red/15 text-accent-red border-accent-red/25",       off: "text-text-tertiary border-[rgba(0,0,0,0.08)]" },
-              HOLD: { on: "bg-[rgba(0,0,0,0.06)] text-text-secondary border-[rgba(0,0,0,0.10)]", off: "text-text-tertiary border-[rgba(0,0,0,0.08)]" },
+              BUY:  { on: "bg-accent-green/15 text-accent-green border-accent-green/25", off: "text-text-tertiary border-[rgba(255,255,255,0.06)]" },
+              SELL: { on: "bg-accent-red/15 text-accent-red border-accent-red/25",       off: "text-text-tertiary border-[rgba(255,255,255,0.06)]" },
+              HOLD: { on: "bg-[rgba(255,255,255,0.05)] text-text-secondary border-[rgba(255,255,255,0.08)]", off: "text-text-tertiary border-[rgba(255,255,255,0.06)]" },
             };
             const cls = filters.size === 0
               ? colors[f].on
@@ -567,10 +567,10 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove, tickerInpu
       </div>
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-bg-secondary overflow-hidden">
+      <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-bg-secondary overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-[rgba(0,0,0,0.10)]">
+            <TableRow className="border-b border-[rgba(255,255,255,0.08)]">
               {COLS.map((col) => (
                 <TableHead
                   key={col.key}

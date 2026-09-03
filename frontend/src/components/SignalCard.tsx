@@ -200,7 +200,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
         stopHit           ? "border-accent-red/30 " + colorCls.glow :
         targetHit         ? "border-accent-green/30 " + colorCls.glow :
         alertLevel === "near_stop" ? "border-orange-500/20" :
-        "border-[rgba(0,0,0,0.08)] hover:border-[rgba(0,0,0,0.14)]",
+        "border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]",
       )}
       style={style}
     >

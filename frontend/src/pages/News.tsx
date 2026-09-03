@@ -208,14 +208,14 @@ function VixCard() {
               />
               <Tooltip
                 contentStyle={{
-                  background: "#FFFFFF",
-                  border: "1px solid rgba(0,0,0,0.12)",
+                  background: "#161E2E",
+                  border: "1px solid rgba(255,255,255,0.09)",
                   borderRadius: 8,
                   fontSize: 11,
                   fontFamily: "Roboto Mono, monospace",
                 }}
-                labelStyle={{ color: "#475569" }}
-                itemStyle={{ color: "#1A1A2E" }}
+                labelStyle={{ color: "#94A3B8" }}
+                itemStyle={{ color: "#F8FAFC" }}
                 formatter={(v: number) => [v.toFixed(2), "VIX"]}
                 labelFormatter={(d: string) => d}
               />

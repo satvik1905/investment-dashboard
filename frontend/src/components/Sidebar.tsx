@@ -55,16 +55,6 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
-        <path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.7 3.3l-1.27 1.27M4.57 11.43L3.3 12.7M12.7 12.7l-1.27-1.27M4.57 4.57L3.3 3.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
 ] as const;
 
 function MarketStatus() {
@@ -83,7 +73,7 @@ function MarketStatus() {
     : "Loading…";
 
   return (
-    <div className="px-5 py-4 border-t border-[rgba(0,0,0,0.06)]">
+    <div className="px-5 py-4 border-t border-[rgba(255,255,255,0.05)]">
       <div className="hidden md:flex items-center gap-2">
         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
         <span className="text-text-tertiary text-[10px] tracking-widest uppercase font-mono">{label}</span>
@@ -99,10 +89,10 @@ export function Sidebar() {
 
   return (
     <aside
-      className="w-14 md:w-[220px] bg-bg-secondary border-r border-[rgba(0,0,0,0.06)] flex flex-col h-screen sticky top-0 shrink-0"
+      className="w-14 md:w-[220px] bg-bg-secondary border-r border-[rgba(255,255,255,0.05)] flex flex-col h-screen sticky top-0 shrink-0"
     >
       {/* Logo */}
-      <div className="px-4 md:px-5 py-5 border-b border-[rgba(0,0,0,0.06)]">
+      <div className="px-4 md:px-5 py-5 border-b border-[rgba(255,255,255,0.05)]">
         <div className="flex items-center gap-3">
           {/* Diamond logo mark */}
           <div className="w-8 h-8 flex items-center justify-center shrink-0">
@@ -139,8 +129,8 @@ export function Sidebar() {
               className={`
                 relative w-full flex items-center gap-3 px-3 py-2.5 h-auto rounded-lg justify-start
                 ${active
-                  ? "text-text-primary bg-[rgba(0,0,0,0.04)]"
-                  : "text-text-tertiary hover:text-text-secondary hover:bg-[rgba(0,0,0,0.03)]"
+                  ? "text-text-primary bg-[rgba(255,255,255,0.06)]"
+                  : "text-text-tertiary hover:text-text-secondary hover:bg-[rgba(255,255,255,0.04)]"
                 }
               `}
             >

@@ -12,11 +12,11 @@ export function NewsArticleRow({ ticker, title, publisher, link, timeAgo }: Prop
   return (
     <div
       onClick={open}
-      className="group flex flex-col gap-2 px-5 py-4 cursor-pointer transition-colors border-b border-[rgba(0,0,0,0.06)] bg-transparent hover:bg-bg-tertiary"
+      className="group flex flex-col gap-2 px-5 py-4 cursor-pointer transition-colors border-b border-[rgba(255,255,255,0.05)] bg-transparent hover:bg-bg-tertiary"
     >
       {/* Meta row */}
       <div className="flex items-center gap-2">
-        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary border border-[rgba(0,0,0,0.08)]">
+        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary border border-[rgba(255,255,255,0.06)]">
           {ticker}
         </span>
         <span className="text-xs font-sans text-text-tertiary">

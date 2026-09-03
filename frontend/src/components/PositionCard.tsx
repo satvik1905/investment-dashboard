@@ -49,7 +49,7 @@ export function PositionCard({ position, style }: Props) {
     ? "border-orange-500/20"
     : targetHit
     ? "border-accent-green/30"
-    : "border-[rgba(0,0,0,0.08)]";
+    : "border-[rgba(255,255,255,0.06)]";
 
   return (
     <Card

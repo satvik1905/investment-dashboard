@@ -101,13 +101,13 @@ export function Journal() {
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#FFFFFF",
-                    border: "1px solid rgba(0,0,0,0.12)",
+                    background: "#161E2E",
+                    border: "1px solid rgba(255,255,255,0.09)",
                     borderRadius: 8,
                     fontSize: 12,
                     fontFamily: "Roboto Mono",
                   }}
-                  labelStyle={{ color: "#475569" }}
+                  labelStyle={{ color: "#94A3B8" }}
                   formatter={(value: number) => [`$${value.toFixed(2)}`, "P&L"]}
                 />
                 <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
@@ -129,7 +129,7 @@ export function Journal() {
 
       {/* Trade table */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-[rgba(255,255,255,0.05)] flex items-center justify-between">
           <span className="text-text-secondary text-sm font-medium">Trade History</span>
           {trades && (
             <span className="text-text-tertiary text-xs font-mono">{trades.length} trades</span>

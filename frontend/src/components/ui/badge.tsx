@@ -23,7 +23,7 @@ const badgeVariants = cva(
         strongBuy: "bg-accent-green/20 text-accent-green border border-accent-green/40",
         sell: "bg-accent-red/15 text-accent-red border border-accent-red/25",
         strongSell: "bg-accent-red/20 text-accent-red border border-accent-red/40",
-        hold: "bg-[rgba(0,0,0,0.05)] text-text-tertiary border border-[rgba(0,0,0,0.10)]",
+        hold: "bg-[rgba(255,255,255,0.05)] text-text-tertiary border border-[rgba(255,255,255,0.08)]",
         win: "bg-accent-green/10 text-accent-green border border-accent-green/20",
         loss: "bg-accent-red/10 text-accent-red border border-accent-red/20",
         warning: "bg-accent-amber/10 text-accent-amber border border-accent-amber/20",

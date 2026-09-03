@@ -73,10 +73,10 @@ const DC_WICK: Record<DannyColor, string> = {
   YELLOW: "#F9A825",
 };
 
-const BG     = "#FFFFFF";
-const TEXT   = "#64748B";
-const GRID   = "rgba(0,0,0,0.05)";
-const BORDER = "rgba(0,0,0,0.10)";
+const BG     = "#111827";
+const TEXT   = "#94A3B8";
+const GRID   = "rgba(255,255,255,0.05)";
+const BORDER = "rgba(255,255,255,0.09)";
 
 const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
   STRONG_BUY: "strongBuy",
@@ -488,12 +488,12 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     display: "none",
                     position: "absolute",
                     pointerEvents: "none",
-                    background: "rgba(255,255,255,0.96)",
-                    border: "1px solid rgba(0,0,0,0.12)",
+                    background: "rgba(22,30,46,0.96)",
+                    border: "1px solid rgba(255,255,255,0.09)",
                     borderRadius: "8px",
                     padding: "10px 12px",
                     backdropFilter: "blur(8px)",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
                     zIndex: 20,
                     minWidth: "155px",
                   }}

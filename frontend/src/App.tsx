@@ -3,7 +3,6 @@ import { useAppStore } from "./store/appStore";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./pages/Dashboard";
 import { Journal } from "./pages/Journal";
-import { Settings } from "./pages/Settings";
 import { Scanner } from "./pages/Scanner";
 import { Watchlist } from "./pages/Watchlist";
 import { News } from "./pages/News";
@@ -143,7 +142,6 @@ export default function App() {
           {activeTab === "news" && <News />}
           {activeTab === "journal" && <Journal />}
           {activeTab === "scanner" && <Scanner />}
-          {activeTab === "settings" && <Settings />}
         </main>
       </div>
     </TooltipProvider>
