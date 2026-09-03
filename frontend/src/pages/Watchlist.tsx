@@ -70,7 +70,7 @@ function WatchlistRow({
 
   const dirArrow = (d: string | null) => d === "UP" ? "↑" : d === "DOWN" ? "↓" : "→";
   const dirColor = (d: string | null) =>
-    d === "UP" ? "text-accent-green" : d === "DOWN" ? "text-accent-red" : "text-text-tertiary";
+    d === "UP" ? "text-primary" : d === "DOWN" ? "text-destructive" : "text-muted-foreground";
 
   return (
     <TableRow
@@ -80,7 +80,7 @@ function WatchlistRow({
       {/* Ticker + signal */}
       <TableCell className="py-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="font-mono text-sm font-semibold text-text-primary group-hover:text-accent-blue transition-colors truncate">
+          <span className="font-mono text-sm font-semibold text-foreground group-hover:text-ring transition-colors truncate">
             {signal.ticker}
           </span>
           <Badge variant={badgeVariant} className="text-[10px] font-bold shrink-0">
@@ -111,7 +111,7 @@ function WatchlistRow({
                 )}
                 {rsi != null && (
                   <span className={`font-mono text-xs ${
-                    rsi >= 70 ? "text-accent-red" : rsi <= 30 ? "text-accent-green" : "text-text-tertiary"
+                    rsi >= 70 ? "text-destructive" : rsi <= 30 ? "text-primary" : "text-muted-foreground"
                   }`}>
                     RSI {rsi.toFixed(0)}
                   </span>
@@ -124,14 +124,14 @@ function WatchlistRow({
 
       {/* Price */}
       <TableCell className="py-3 text-right">
-        <span className="font-mono text-sm text-text-primary">
+        <span className="font-mono text-sm text-foreground">
           {price != null ? `$${price.toFixed(2)}` : "—"}
         </span>
       </TableCell>
 
       {/* Change % */}
       <TableCell className="py-3 text-right">
-        <span className={`font-mono text-sm ${isUp ? "text-accent-green" : "text-accent-red"}`}>
+        <span className={`font-mono text-sm ${isUp ? "text-primary" : "text-destructive"}`}>
           {isUp ? "+" : ""}{pct.toFixed(2)}%
         </span>
       </TableCell>
@@ -143,7 +143,7 @@ function WatchlistRow({
             value={confidence}
             className="flex-1 h-1.5 min-w-[40px] max-w-[80px]"
           />
-          <span className="font-mono text-xs text-text-tertiary w-7 text-right">{confidence}</span>
+          <span className="font-mono text-xs text-muted-foreground w-7 text-right">{confidence}</span>
         </div>
       </TableCell>
 
@@ -160,7 +160,7 @@ function WatchlistRow({
 
       {/* Generated at */}
       <TableCell className="py-3 text-right">
-        <span className="text-text-tertiary text-xs">
+        <span className="text-muted-foreground text-xs">
           {timeAgo(signal.generated_at)}
         </span>
       </TableCell>
@@ -174,7 +174,7 @@ function WatchlistRow({
             onClick={onRefresh}
             disabled={refreshing}
             title="Refresh signal"
-            className="text-text-tertiary hover:text-accent-blue hover:bg-black/[0.04]"
+            className="text-muted-foreground hover:text-ring hover:bg-black/[0.04]"
           >
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className={refreshing ? "animate-spin" : ""}>
               <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5a5.5 5.5 0 0 1 3.9 1.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
@@ -186,7 +186,7 @@ function WatchlistRow({
             size="icon-xs"
             onClick={onRemove}
             title="Remove from watchlist"
-            className="text-text-tertiary hover:text-accent-red hover:bg-accent-red/10"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
               <path d="M2 4h12M6 4V2h4v2M5 4l.5 9h5L11 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -231,25 +231,25 @@ export function Watchlist() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">Watchlist</h1>
-            <p className="text-text-tertiary text-sm mt-0.5">
+            <h1 className="font-sans text-2xl font-bold text-foreground tracking-tight">Watchlist</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
               {signals.length} stock{signals.length !== 1 ? "s" : ""} tracked
             </p>
           </div>
         </div>
 
         {/* Table */}
-        <div className="rounded-xl border border-black/[0.10] bg-bg-secondary overflow-hidden">
+        <div className="rounded-xl border border-black/[0.10] bg-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-black/[0.02]">
-                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Ticker</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary hidden lg:table-cell">Signal Info</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary text-right">Price</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary text-right">Change</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Confidence</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary text-center">Direction</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary text-right">Updated</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Ticker</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden lg:table-cell">Signal Info</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-right">Price</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-right">Change</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Confidence</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-center">Direction</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-right">Updated</TableHead>
                 <TableHead className="w-16" />
               </TableRow>
             </TableHeader>
@@ -267,7 +267,7 @@ export function Watchlist() {
               ) : signals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="py-20">
-                    <div className="flex flex-col items-center gap-3 text-text-tertiary">
+                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" opacity="0.3">
                         <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
                       </svg>

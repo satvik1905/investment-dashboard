@@ -52,7 +52,7 @@ function timeAgo(iso: string | null): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] mb-4 text-text-tertiary">
+    <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] mb-4 text-muted-foreground">
       {children}
     </div>
   );
@@ -87,7 +87,7 @@ function VixCard() {
   if (!vix || vix.current == null) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center h-40 text-sm font-sans text-text-tertiary">
+        <CardContent className="flex items-center justify-center h-40 text-sm font-sans text-muted-foreground">
           VIX unavailable
         </CardContent>
       </Card>
@@ -100,7 +100,7 @@ function VixCard() {
 
   // VIX up = more fear (red), VIX down = calmer (green)
   const vixUp = change > 0;
-  const changeColor = vixUp ? "text-accent-red" : "text-accent-green";
+  const changeColor = vixUp ? "text-destructive" : "text-primary";
   const changeArrow = vixUp ? "↑" : "↓";
 
   // State pill
@@ -144,7 +144,7 @@ function VixCard() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-text-tertiary">
+            <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Volatility · VIX
             </span>
             <Badge variant={pillVariant} className="text-[10px] font-mono font-semibold">
@@ -157,7 +157,7 @@ function VixCard() {
             type="single"
             value={range}
             onValueChange={(v) => v && setRange(v as VixRange)}
-            className="bg-bg-secondary border border-black/[0.08] rounded-lg p-0.5"
+            className="bg-card border border-black/[0.08] rounded-lg p-0.5"
           >
             {VIX_RANGES.map((r) => (
               <ToggleGroupItem
@@ -173,7 +173,7 @@ function VixCard() {
 
         {/* Value row */}
         <div className="flex items-baseline gap-3 mb-5">
-          <span className="text-3xl font-mono font-bold text-text-primary">
+          <span className="text-3xl font-mono font-bold text-foreground">
             {current.toFixed(2)}
           </span>
           <span className={`text-sm font-mono font-medium ${changeColor}`}>
@@ -185,13 +185,13 @@ function VixCard() {
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={vix.closes} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <ReferenceArea y1={Math.max(yDomain[0], 10)} y2={15} fill="#3B82F6" fillOpacity={0.05} />
-              <ReferenceArea y1={15} y2={25} fill="#F59E0B" fillOpacity={0.05} />
-              <ReferenceArea y1={25} y2={Math.min(yDomain[1], 45)} fill="#F43F5E" fillOpacity={0.05} />
+              <ReferenceArea y1={Math.max(yDomain[0], 10)} y2={15} fill="#16a34a" fillOpacity={0.05} />
+              <ReferenceArea y1={15} y2={25} fill="#f59e0b" fillOpacity={0.05} />
+              <ReferenceArea y1={25} y2={Math.min(yDomain[1], 45)} fill="#dc2626" fillOpacity={0.05} />
 
               <XAxis
                 dataKey="date"
-                tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "Roboto Mono" }}
+                tick={{ fill: "#64748b", fontSize: 10, fontFamily: "Roboto Mono" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(d: string) => d.slice(5)}
@@ -200,7 +200,7 @@ function VixCard() {
               />
               <YAxis
                 domain={yDomain}
-                tick={{ fill: "var(--text-muted)", fontSize: 10, fontFamily: "Roboto Mono" }}
+                tick={{ fill: "#64748b", fontSize: 10, fontFamily: "Roboto Mono" }}
                 axisLine={false}
                 tickLine={false}
                 width={30}
@@ -208,31 +208,31 @@ function VixCard() {
               />
               <Tooltip
                 contentStyle={{
-                  background: "#161E2E",
-                  border: "1px solid rgba(255,255,255,0.09)",
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
                   borderRadius: 8,
                   fontSize: 11,
-                  fontFamily: "Roboto Mono, monospace",
+                  fontFamily: "var(--font-geist-mono, monospace)",
                 }}
-                labelStyle={{ color: "#94A3B8" }}
-                itemStyle={{ color: "#F8FAFC" }}
+                labelStyle={{ color: "#64748b" }}
+                itemStyle={{ color: "#0f172a" }}
                 formatter={(v: number) => [v.toFixed(2), "VIX"]}
                 labelFormatter={(d: string) => d}
               />
               <defs>
                 <linearGradient id="vixGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke="#F59E0B"
+                stroke="#f59e0b"
                 strokeWidth={1.5}
                 fill="url(#vixGradient)"
                 dot={false}
-                activeDot={{ r: 3, fill: "#F59E0B" }}
+                activeDot={{ r: 3, fill: "#f59e0b" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -252,7 +252,7 @@ function EmptyState() {
         <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"
           stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
       </svg>
-      <p className="text-sm font-sans font-medium text-text-secondary">
+      <p className="text-sm font-sans font-medium text-muted-foreground">
         Add stocks to your signals or positions to see news
       </p>
       <Button variant="outline" onClick={() => setActiveTab("watchlist")}>
@@ -293,10 +293,10 @@ export function News() {
   const header = (
     <div className="flex items-start justify-between">
       <div>
-        <h1 className="font-display text-3xl font-bold text-text-primary">
+        <h1 className="font-sans text-3xl font-bold text-foreground">
           News & Sentiment
         </h1>
-        <p className="text-sm font-sans mt-1 text-text-tertiary">
+        <p className="text-sm font-sans mt-1 text-muted-foreground">
           Market volatility and stock news for your positions
         </p>
       </div>
@@ -350,7 +350,7 @@ export function News() {
           </div>
         ) : filtered.length === 0 ? (
           <Card>
-            <CardContent className="flex items-center justify-center h-32 text-sm font-sans text-text-tertiary">
+            <CardContent className="flex items-center justify-center h-32 text-sm font-sans text-muted-foreground">
               No recent news found for your stocks.
             </CardContent>
           </Card>

@@ -73,10 +73,10 @@ const DC_WICK: Record<DannyColor, string> = {
   YELLOW: "#F9A825",
 };
 
-const BG     = "#111827";
-const TEXT   = "#94A3B8";
-const GRID   = "rgba(255,255,255,0.05)";
-const BORDER = "rgba(255,255,255,0.09)";
+const BG     = "#ffffff";
+const TEXT   = "#64748b";
+const GRID   = "#e2e8f0";
+const BORDER = "#e2e8f0";
 
 const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
   STRONG_BUY: "strongBuy",
@@ -335,13 +335,13 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       tooltip.innerHTML = `
         <div style="border-left:3px solid ${clr};padding-left:8px">
           <div style="color:#1A1A2E;font-size:12px;font-weight:600">${timeframe === "D" ? `${weekday}, ` : ""}${dateLabel}</div>
-          <div style="color:var(--text-disabled);font-size:10px;margin-top:1px">${subLabel}</div>
+          <div style="color:#64748b;font-size:10px;margin-top:1px">${subLabel}</div>
         </div>
         <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:11px;font-family:'Roboto Mono',monospace">
-          <div><span style="color:var(--text-disabled)">O</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.open)}</span></div>
-          <div><span style="color:var(--text-disabled)">H</span>&nbsp;<span style="color:#22c55e">${fmt(candle.high)}</span></div>
-          <div><span style="color:var(--text-disabled)">C</span>&nbsp;<span style="color:${clr}">${fmt(candle.close)}</span></div>
-          <div><span style="color:var(--text-disabled)">L</span>&nbsp;<span style="color:#ef4444">${fmt(candle.low)}</span></div>
+          <div><span style="color:#64748b">O</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.open)}</span></div>
+          <div><span style="color:#64748b">H</span>&nbsp;<span style="color:#22c55e">${fmt(candle.high)}</span></div>
+          <div><span style="color:#64748b">C</span>&nbsp;<span style="color:${clr}">${fmt(candle.close)}</span></div>
+          <div><span style="color:#64748b">L</span>&nbsp;<span style="color:#ef4444">${fmt(candle.low)}</span></div>
         </div>
       `;
 
@@ -384,28 +384,28 @@ export function StockDetailModal({ ticker, onClose }: Props) {
   const smaLabels    = data?.sma_labels ?? ["SMA 20", "SMA 50", "SMA 200"];
 
   const dirColor = (d: string | null) =>
-    d === "UP" ? "text-accent-green" : d === "DOWN" ? "text-accent-red" : "text-text-tertiary";
+    d === "UP" ? "text-primary" : d === "DOWN" ? "text-destructive" : "text-muted-foreground";
   const dirArrow = (d: string | null) =>
     d === "UP" ? "↑" : d === "DOWN" ? "↓" : "→";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg-primary">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.10] bg-bg-secondary shrink-0">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.10] bg-card shrink-0">
 
         {/* Left: close + ticker + price + signal badge */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon-xs" onClick={handleClose} className="text-text-tertiary hover:text-text-primary text-lg leading-none">
+          <Button variant="ghost" size="icon-xs" onClick={handleClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">
             ✕
           </Button>
           <div className="flex items-baseline gap-2.5">
-            <span className="font-mono text-xl font-semibold text-text-primary">{ticker}</span>
+            <span className="font-mono text-xl font-semibold text-foreground">{ticker}</span>
             {currentPrice != null && (
-              <span className="font-mono text-base text-text-secondary">${currentPrice.toFixed(2)}</span>
+              <span className="font-mono text-base text-muted-foreground">${currentPrice.toFixed(2)}</span>
             )}
             {changePct != null && (
-              <span className={`font-mono text-xs ${changePct >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+              <span className={`font-mono text-xs ${changePct >= 0 ? "text-primary" : "text-destructive"}`}>
                 {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
               </span>
             )}
@@ -422,14 +422,14 @@ export function StockDetailModal({ ticker, onClose }: Props) {
           type="single"
           value={timeframe}
           onValueChange={(v) => v && setTimeframe(v as Timeframe)}
-          className="bg-bg-tertiary rounded-lg p-1"
+          className="bg-muted rounded-lg p-1"
         >
           {(["D", "W", "M"] as Timeframe[]).map(tf => (
             <ToggleGroupItem
               key={tf}
               value={tf}
               className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                timeframe === tf ? "bg-accent-blue text-white shadow" : "text-text-tertiary hover:text-text-secondary"
+                timeframe === tf ? "bg-ring text-white shadow" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tf}
@@ -438,7 +438,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         </ToggleGroup>
 
         {/* Right: SMA legend */}
-        <div className="hidden lg:flex items-center gap-4 text-xs text-text-tertiary">
+        <div className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground">
           {smaLabels.map((label, i) => (
             <span key={label} className="flex items-center gap-1.5">
               <span className="inline-block w-5 h-0.5 rounded" style={{ backgroundColor: SMA_COLORS[i] }} />
@@ -450,7 +450,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
       {/* Data quality warning */}
       {(signal?.raw_indicators?.data_warning || liveQuote?.data_warning) && (
-        <Alert className="mx-5 mt-3 rounded-lg bg-accent-amber/10 border-accent-amber/25 text-accent-amber">
+        <Alert className="mx-5 mt-3 rounded-lg bg-status-after/10 border-status-after/25 text-status-after">
           <AlertDescription className="text-xs leading-relaxed">
             <span className="font-semibold">⚠ This ticker's data may be stale or incorrect:</span>{" "}
             {((liveQuote?.data_warning ?? signal?.raw_indicators?.data_warning) as string[]).join(" · ")}
@@ -466,17 +466,17 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
           {/* Loading overlay */}
           {isFetching && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60 backdrop-blur-[2px]">
-              <div className="flex items-center gap-2.5 bg-bg-secondary border border-black/[0.10] rounded-xl px-4 py-2.5 shadow-xl">
-                <div className="w-4 h-4 border-2 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
-                <span className="text-text-secondary text-xs">{TF_CONFIG[timeframe].label} data…</span>
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
+              <div className="flex items-center gap-2.5 bg-card border border-black/[0.10] rounded-xl px-4 py-2.5 shadow-xl">
+                <div className="w-4 h-4 border-2 border-ring/30 border-t-ring rounded-full animate-spin" />
+                <span className="text-muted-foreground text-xs">{TF_CONFIG[timeframe].label} data…</span>
               </div>
             </div>
           )}
 
           {!data?.candles?.length && !isFetching ? (
-            <div className="flex-1 flex items-center justify-center text-text-tertiary">
-              <div className="w-8 h-8 border-2 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="w-8 h-8 border-2 border-ring/30 border-t-ring rounded-full animate-spin" />
             </div>
           ) : (
             <>
@@ -488,12 +488,12 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     display: "none",
                     position: "absolute",
                     pointerEvents: "none",
-                    background: "rgba(22,30,46,0.96)",
-                    border: "1px solid rgba(255,255,255,0.09)",
+                    background: "rgba(255,255,255,0.96)",
+                    border: "1px solid #e2e8f0",
                     borderRadius: "8px",
                     padding: "10px 12px",
                     backdropFilter: "blur(8px)",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+                    boxShadow: "0 4px 12px rgb(15 23 42 / 0.08)",
                     zIndex: 20,
                     minWidth: "155px",
                   }}
@@ -508,23 +508,23 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         </div>
 
         {/* ── Signal panel ─────────────────────────────────────────────────── */}
-        <div className="w-80 border-l border-black/[0.10] bg-bg-secondary flex flex-col overflow-y-auto shrink-0">
+        <div className="w-80 border-l border-black/[0.10] bg-card flex flex-col overflow-y-auto shrink-0">
           {signalLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
-              <div className="w-6 h-6 border-2 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
-              <span className="text-text-secondary text-xs">Updating signal…</span>
+              <div className="w-6 h-6 border-2 border-ring/30 border-t-ring rounded-full animate-spin" />
+              <span className="text-muted-foreground text-xs">Updating signal…</span>
             </div>
           ) : signal ? (
             <div className="p-5 space-y-5">
 
               {/* Stale / validation-fail banner */}
               {!signalRefreshed && signalWarnings && (
-                <Alert className="px-3 py-3 rounded-lg border-2 border-accent-red/40 bg-accent-red/10">
+                <Alert className="px-3 py-3 rounded-lg border-2 border-destructive/40 bg-destructive/10">
                   <AlertDescription>
-                    <div className="text-accent-red text-xs font-bold uppercase tracking-wider mb-1">Could not refresh</div>
-                    <p className="text-accent-red/80 text-xs leading-relaxed">{signalWarnings.join(" · ")}</p>
+                    <div className="text-destructive text-xs font-bold uppercase tracking-wider mb-1">Could not refresh</div>
+                    <p className="text-destructive/80 text-xs leading-relaxed">{signalWarnings.join(" · ")}</p>
                     {signal.generated_at && (
-                      <p className="text-text-tertiary text-[10px] mt-1.5">
+                      <p className="text-muted-foreground text-[10px] mt-1.5">
                         Showing last known signal from {new Date(signal.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     )}
@@ -534,13 +534,13 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
               {/* Fresh indicator */}
               {signalRefreshed && (
-                <div className="text-center text-[10px] text-accent-green/70 uppercase tracking-wider">Updated just now</div>
+                <div className="text-center text-[10px] text-primary/70 uppercase tracking-wider">Updated just now</div>
               )}
 
               {/* Confidence */}
               <div className="flex flex-col items-center gap-1 pt-2">
                 <ConfidenceMeter confidence={confidence} size={100} />
-                <span className="text-text-tertiary text-xs uppercase tracking-wider mt-1">Confidence</span>
+                <span className="text-muted-foreground text-xs uppercase tracking-wider mt-1">Confidence</span>
               </div>
 
               {/* Price levels */}
@@ -551,13 +551,13 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     value: signal.entry_zone_low && signal.entry_zone_high
                       ? `$${parseFloat(signal.entry_zone_low).toFixed(2)} – $${parseFloat(signal.entry_zone_high).toFixed(2)}`
                       : "—",
-                    color: "text-accent-amber",
+                    color: "text-status-after",
                   },
-                  { label: "Target",    value: signal.target_price ? `$${parseFloat(signal.target_price).toFixed(2)}` : "—", color: "text-accent-green" },
-                  { label: "Stop Loss", value: signal.stop_loss    ? `$${parseFloat(signal.stop_loss).toFixed(2)}`    : "—", color: "text-accent-red"   },
+                  { label: "Target",    value: signal.target_price ? `$${parseFloat(signal.target_price).toFixed(2)}` : "—", color: "text-primary" },
+                  { label: "Stop Loss", value: signal.stop_loss    ? `$${parseFloat(signal.stop_loss).toFixed(2)}`    : "—", color: "text-destructive"   },
                 ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-bg-tertiary rounded-lg px-3 py-2.5 flex justify-between items-center">
-                    <span className="text-text-tertiary text-xs uppercase tracking-wider">{label}</span>
+                  <div key={label} className="bg-muted rounded-lg px-3 py-2.5 flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs uppercase tracking-wider">{label}</span>
                     <span className={`font-mono text-sm font-semibold ${color}`}>{value}</span>
                   </div>
                 ))}
@@ -565,16 +565,16 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
               {/* Price direction */}
               <div>
-                <div className="text-text-tertiary text-xs uppercase tracking-wider mb-2">Price Direction</div>
+                <div className="text-muted-foreground text-xs uppercase tracking-wider mb-2">Price Direction</div>
                 <div className="flex gap-2">
                   {[
                     { label: "3D",  dir: signal.price_direction_3d  },
                     { label: "7D",  dir: signal.price_direction_7d  },
                     { label: "14D", dir: signal.price_direction_14d },
                   ].map(({ label, dir }) => (
-                    <div key={label} className="flex-1 bg-bg-tertiary rounded-lg py-2 flex flex-col items-center gap-0.5">
+                    <div key={label} className="flex-1 bg-muted rounded-lg py-2 flex flex-col items-center gap-0.5">
                       <span className={`font-mono text-sm font-bold ${dirColor(dir)}`}>{dirArrow(dir)}</span>
-                      <span className="text-text-tertiary text-[10px]">{label}</span>
+                      <span className="text-muted-foreground text-[10px]">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -583,21 +583,21 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               {/* Key reason */}
               {signal.key_reason && (
                 <div>
-                  <div className="text-text-tertiary text-xs uppercase tracking-wider mb-2">Key Signal</div>
-                  <p className="text-text-secondary text-xs leading-relaxed bg-bg-tertiary rounded-lg p-3">{signal.key_reason}</p>
+                  <div className="text-muted-foreground text-xs uppercase tracking-wider mb-2">Key Signal</div>
+                  <p className="text-muted-foreground text-xs leading-relaxed bg-muted rounded-lg p-3">{signal.key_reason}</p>
                 </div>
               )}
 
               {/* RSI value */}
               {signal.raw_indicators?.rsi_14 != null && (
-                <div className="bg-bg-tertiary rounded-lg px-3 py-2.5 flex justify-between items-center">
-                  <span className="text-text-tertiary text-xs uppercase tracking-wider">RSI (14)</span>
+                <div className="bg-muted rounded-lg px-3 py-2.5 flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs uppercase tracking-wider">RSI (14)</span>
                   <span className={`font-mono text-sm font-semibold ${
-                    (signal.raw_indicators.rsi_14 as number) < 30 ? "text-accent-green" :
-                    (signal.raw_indicators.rsi_14 as number) > 70 ? "text-accent-red" : "text-text-primary"
+                    (signal.raw_indicators.rsi_14 as number) < 30 ? "text-primary" :
+                    (signal.raw_indicators.rsi_14 as number) > 70 ? "text-destructive" : "text-foreground"
                   }`}>
                     {(signal.raw_indicators.rsi_14 as number).toFixed(1)}
-                    <span className="text-text-tertiary text-[10px] ml-1">
+                    <span className="text-muted-foreground text-[10px] ml-1">
                       {(signal.raw_indicators.rsi_14 as number) < 30 ? "OVERSOLD" :
                        (signal.raw_indicators.rsi_14 as number) > 70 ? "OVERBOUGHT" : "NEUTRAL"}
                     </span>
@@ -609,10 +609,10 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               {signal.summary && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-accent-blue text-xs">◈</span>
-                    <span className="text-text-tertiary text-xs uppercase tracking-wider">Setup Analysis</span>
+                    <span className="text-ring text-xs">◈</span>
+                    <span className="text-muted-foreground text-xs uppercase tracking-wider">Setup Analysis</span>
                   </div>
-                  <p className="text-text-secondary text-xs leading-relaxed">{signal.summary}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{signal.summary}</p>
                 </div>
               )}
 
@@ -631,24 +631,24 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       }
                       setContextState("done");
                     }}
-                    className="w-full border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 text-xs font-semibold"
+                    className="w-full border-violet-600/30 bg-violet-600/10 text-violet-600 hover:bg-violet-600/20 text-xs font-semibold"
                   >
                     ✦ Get context read
                   </Button>
                 )}
                 {contextState === "loading" && (
-                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
-                    <div className="w-3.5 h-3.5 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
-                    <span className="text-accent-purple/70 text-xs">Analyzing… this takes a few seconds</span>
+                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-violet-600/20 bg-violet-600/5">
+                    <div className="w-3.5 h-3.5 border-2 border-violet-600/30 border-t-violet-600 rounded-full animate-spin" />
+                    <span className="text-violet-600/70 text-xs">Analyzing… this takes a few seconds</span>
                   </div>
                 )}
                 {contextState === "done" && (
-                  <div className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 p-3">
+                  <div className="rounded-lg border border-violet-600/20 bg-violet-600/5 p-3">
                     <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-accent-purple text-xs">✦</span>
-                      <span className="text-accent-purple/70 text-xs uppercase tracking-wider font-semibold">AI Context</span>
+                      <span className="text-violet-600 text-xs">✦</span>
+                      <span className="text-violet-600/70 text-xs uppercase tracking-wider font-semibold">AI Context</span>
                     </div>
-                    <p className="text-text-secondary text-xs leading-relaxed">
+                    <p className="text-muted-foreground text-xs leading-relaxed">
                       {contextText ?? "Context unavailable right now"}
                     </p>
                   </div>
@@ -670,25 +670,25 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       }
                       setChartAnalysisState("done");
                     }}
-                    className="w-full border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 text-xs font-semibold"
+                    className="w-full border-violet-600/30 bg-violet-600/10 text-violet-600 hover:bg-violet-600/20 text-xs font-semibold"
                   >
                     ✦ Analyze the charts
                   </Button>
                 )}
                 {chartAnalysisState === "loading" && (
-                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
-                    <div className="w-3.5 h-3.5 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
-                    <span className="text-accent-purple/70 text-xs">Analyzing charts… this takes a few seconds</span>
+                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-violet-600/20 bg-violet-600/5">
+                    <div className="w-3.5 h-3.5 border-2 border-violet-600/30 border-t-violet-600 rounded-full animate-spin" />
+                    <span className="text-violet-600/70 text-xs">Analyzing charts… this takes a few seconds</span>
                   </div>
                 )}
                 {chartAnalysisState === "done" && (
                   <>
-                    <div className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 p-3">
+                    <div className="rounded-lg border border-violet-600/20 bg-violet-600/5 p-3">
                       <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-accent-purple text-xs">✦</span>
-                        <span className="text-accent-purple/70 text-xs uppercase tracking-wider font-semibold">Chart Analysis</span>
+                        <span className="text-violet-600 text-xs">✦</span>
+                        <span className="text-violet-600/70 text-xs uppercase tracking-wider font-semibold">Chart Analysis</span>
                       </div>
-                      <p className="text-text-secondary text-xs leading-relaxed">
+                      <p className="text-muted-foreground text-xs leading-relaxed">
                         {chartAnalysisText ?? "Chart analysis unavailable right now"}
                       </p>
                     </div>
@@ -696,7 +696,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       variant="ghost"
                       size="xs"
                       onClick={() => { setChartAnalysisState("idle"); setChartAnalysisText(null); }}
-                      className="w-full mt-1.5 text-[10px] text-text-tertiary hover:text-accent-purple"
+                      className="w-full mt-1.5 text-[10px] text-muted-foreground hover:text-violet-600"
                     >
                       Re-run analysis
                     </Button>
@@ -719,25 +719,25 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       }
                       setSetupReviewState("done");
                     }}
-                    className="w-full border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 text-xs font-semibold"
+                    className="w-full border-violet-600/30 bg-violet-600/10 text-violet-600 hover:bg-violet-600/20 text-xs font-semibold"
                   >
                     ✦ Get setup review
                   </Button>
                 )}
                 {setupReviewState === "loading" && (
-                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
-                    <div className="w-3.5 h-3.5 border-2 border-accent-purple/30 border-t-accent-purple rounded-full animate-spin" />
-                    <span className="text-accent-purple/70 text-xs">Reviewing setup… this takes a few seconds</span>
+                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-violet-600/20 bg-violet-600/5">
+                    <div className="w-3.5 h-3.5 border-2 border-violet-600/30 border-t-violet-600 rounded-full animate-spin" />
+                    <span className="text-violet-600/70 text-xs">Reviewing setup… this takes a few seconds</span>
                   </div>
                 )}
                 {setupReviewState === "done" && (
                   <>
-                    <div className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 p-3">
+                    <div className="rounded-lg border border-violet-600/20 bg-violet-600/5 p-3">
                       <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-accent-purple text-xs">✦</span>
-                        <span className="text-accent-purple/70 text-xs uppercase tracking-wider font-semibold">AI Setup Review</span>
+                        <span className="text-violet-600 text-xs">✦</span>
+                        <span className="text-violet-600/70 text-xs uppercase tracking-wider font-semibold">AI Setup Review</span>
                       </div>
-                      <p className="text-text-secondary text-xs leading-relaxed">
+                      <p className="text-muted-foreground text-xs leading-relaxed">
                         {setupReviewText ?? "Setup review unavailable right now"}
                       </p>
                     </div>
@@ -745,7 +745,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       variant="ghost"
                       size="xs"
                       onClick={() => { setSetupReviewState("idle"); setSetupReviewText(null); }}
-                      className="w-full mt-1.5 text-[10px] text-text-tertiary hover:text-accent-purple"
+                      className="w-full mt-1.5 text-[10px] text-muted-foreground hover:text-violet-600"
                     >
                       Re-run review
                     </Button>
@@ -756,11 +756,11 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               {/* Risk factors */}
               {signal.risk_factors && signal.risk_factors.length > 0 && (
                 <div>
-                  <div className="text-text-tertiary text-xs uppercase tracking-wider mb-2">Risk Factors</div>
+                  <div className="text-muted-foreground text-xs uppercase tracking-wider mb-2">Risk Factors</div>
                   <div className="space-y-1.5">
                     {signal.risk_factors.map((r, i) => (
-                      <Alert key={i} className="bg-accent-amber/5 border-accent-amber/15 px-2.5 py-2">
-                        <AlertDescription className="flex gap-2 text-xs text-accent-amber/80">
+                      <Alert key={i} className="bg-status-after/5 border-status-after/15 px-2.5 py-2">
+                        <AlertDescription className="flex gap-2 text-xs text-status-after/80">
                           <span className="shrink-0">⚠</span>
                           <span className="leading-relaxed">{r}</span>
                         </AlertDescription>
@@ -772,12 +772,12 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center p-6 text-center text-text-tertiary">
+            <div className="flex-1 flex items-center justify-center p-6 text-center text-muted-foreground">
               <div>
                 <div className="text-3xl mb-3">◎</div>
                 <p className="text-sm">No signal available for {ticker}.</p>
                 {signalWarnings && (
-                  <p className="text-accent-red/80 text-xs mt-2">{signalWarnings.join(" · ")}</p>
+                  <p className="text-destructive/80 text-xs mt-2">{signalWarnings.join(" · ")}</p>
                 )}
               </div>
             </div>

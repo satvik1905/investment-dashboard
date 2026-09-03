@@ -1,6 +1,6 @@
 import { useAppStore } from "../store/appStore";
-import { useLiveQuotes } from "../hooks/useLivePrice";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const NAV_ITEMS = [
   {
@@ -45,111 +45,125 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
-  {
-    id: "journal",
-    label: "Journal",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-        <path d="M5 5.5h6M5 8h6M5 10.5h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
 ] as const;
 
-function MarketStatus() {
-  const { marketStatus } = useLiveQuotes(["SPY"]);
-  const dotClass =
-    marketStatus === "OPEN"
-      ? "bg-accent-green animate-pulse"
-      : marketStatus === "PRE_MARKET" || marketStatus === "AFTER_HOURS"
-      ? "bg-accent-amber animate-pulse"
-      : "bg-accent-red";
-  const label =
-    marketStatus === "OPEN"        ? "Market Open"
-    : marketStatus === "PRE_MARKET"  ? "Pre-Market"
-    : marketStatus === "AFTER_HOURS" ? "After Hours"
-    : marketStatus === "CLOSED"      ? "Market Closed"
-    : "Loading…";
-
-  return (
-    <div className="px-5 py-4 border-t border-[rgba(255,255,255,0.05)]">
-      <div className="hidden md:flex items-center gap-2">
-        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
-        <span className="text-text-tertiary text-[10px] tracking-widest uppercase font-mono">{label}</span>
-      </div>
-      {/* Mobile: dot only */}
-      <div className={`md:hidden w-1.5 h-1.5 rounded-full mx-auto ${dotClass}`} />
-    </div>
-  );
-}
-
 export function Sidebar() {
-  const { activeTab, setActiveTab } = useAppStore();
+  const { activeTab, setActiveTab, sidebarOpen, setSidebarOpen } = useAppStore();
+  const collapsed = !sidebarOpen;
 
   return (
     <aside
-      className="w-14 md:w-[220px] bg-bg-secondary border-r border-[rgba(255,255,255,0.05)] flex flex-col h-screen sticky top-0 shrink-0"
+      className={`${collapsed ? "w-14" : "w-[220px]"} bg-card border-r border-border flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200`}
     >
       {/* Logo */}
-      <div className="px-4 md:px-5 py-5 border-b border-[rgba(255,255,255,0.05)]">
+      <div className="px-4 py-5 border-b border-border">
         <div className="flex items-center gap-3">
-          {/* Diamond logo mark */}
           <div className="w-8 h-8 flex items-center justify-center shrink-0">
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
               <path
                 d="M11 1L21 11L11 21L1 11L11 1Z"
-                fill="rgba(16,185,129,0.15)"
-                stroke="#10B981"
+                fill="hsl(138 76% 97%)"
+                stroke="hsl(var(--primary))"
                 strokeWidth="1.5"
               />
-              <path d="M11 5L17 11L11 17L5 11L11 5Z" fill="#10B981" opacity="0.5"/>
+              <path d="M11 5L17 11L11 17L5 11L11 5Z" fill="hsl(var(--primary))" opacity="0.5"/>
             </svg>
           </div>
-          <div className="hidden md:block">
-            <div className="font-display font-bold text-text-primary text-base tracking-tight leading-none">
-              SwingIQ
+          {!collapsed && (
+            <div>
+              <div className="font-sans font-bold text-foreground text-base tracking-tight leading-none">
+                SwingIQ
+              </div>
+              <div className="text-[10px] text-muted-foreground tracking-widest uppercase font-mono mt-0.5">
+                Trading Terminal
+              </div>
             </div>
-            <div className="text-[10px] text-text-tertiary tracking-widest uppercase font-mono mt-0.5">
-              Trading Terminal
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
+      <TooltipProvider delayDuration={0}>
       {/* Nav */}
-      <nav className="flex-1 px-2 md:px-3 py-4 space-y-0.5">
-        {NAV_ITEMS.map((item) => {
-          const active = activeTab === item.id;
-          return (
-            <Button
-              key={item.id}
-              variant="ghost"
-              onClick={() => setActiveTab(item.id)}
-              className={`
-                relative w-full flex items-center gap-3 px-3 py-2.5 h-auto rounded-lg justify-start
-                ${active
-                  ? "text-text-primary bg-[rgba(255,255,255,0.06)]"
-                  : "text-text-tertiary hover:text-text-secondary hover:bg-[rgba(255,255,255,0.04)]"
-                }
-              `}
-            >
-              {/* Active left bar */}
-              {active && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent-green rounded-r-full" />
-              )}
-              <span className={`shrink-0 ${active ? "text-accent-green" : ""}`}>
-                {item.icon}
-              </span>
-              <span className="hidden md:block text-sm font-medium font-sans">
-                {item.label}
-              </span>
-            </Button>
-          );
-        })}
-      </nav>
+        <nav className="flex-1 px-2 py-4 space-y-0.5">
+          {NAV_ITEMS.map((item) => {
+            const active = activeTab === item.id;
+            const button = (
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab(item.id)}
+                className={`
+                  relative w-full flex items-center gap-3 px-3 py-2.5 h-auto rounded-lg
+                  ${collapsed ? "justify-center" : "justify-start"}
+                  ${active
+                    ? "text-foreground bg-signal-buy-bg"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }
+                `}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full" />
+                )}
+                <span className={`shrink-0 ${active ? "text-primary" : ""}`}>
+                  {item.icon}
+                </span>
+                {!collapsed && (
+                  <span className="text-sm font-medium font-sans">
+                    {item.label}
+                  </span>
+                )}
+              </Button>
+            );
 
-      <MarketStatus />
+            if (collapsed) {
+              return (
+                <Tooltip key={item.id}>
+                  <TooltipTrigger asChild>{button}</TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8}>
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+            return <div key={item.id}>{button}</div>;
+          })}
+        </nav>
+
+      {/* Collapse toggle */}
+      <div className="px-2 pb-1">
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={() => setSidebarOpen(true)}
+                className="w-full flex items-center justify-center px-3 py-2.5 h-auto rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 rotate-180">
+                  <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M6 1.5V14.5" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M10 6L8 8L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>Expand</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button
+            variant="ghost"
+            onClick={() => setSidebarOpen(false)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 h-auto rounded-lg justify-start text-muted-foreground hover:text-foreground hover:bg-accent"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+              <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M6 1.5V14.5" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M10 6L8 8L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="text-sm font-medium font-sans">Collapse</span>
+          </Button>
+        )}
+      </div>
+
+      </TooltipProvider>
     </aside>
   );
 }

@@ -44,17 +44,17 @@ export function PositionCard({ position, style }: Props) {
   const targetHit = targetPrice !== null && currentPrice !== null && currentPrice >= targetPrice;
 
   const borderCls = stopHit
-    ? "border-accent-red/30"
+    ? "border-destructive/30"
     : nearStop
     ? "border-orange-500/20"
     : targetHit
-    ? "border-accent-green/30"
-    : "border-[rgba(255,255,255,0.06)]";
+    ? "border-primary/30"
+    : "border-border";
 
   return (
     <Card
       className={cn(
-        "relative bg-bg-secondary rounded-card border card-hover p-0",
+        "relative bg-card rounded-card border p-0",
         borderCls,
       )}
       style={style}
@@ -62,19 +62,19 @@ export function PositionCard({ position, style }: Props) {
       {/* Top bar */}
       <div className={cn(
         "h-[2px] rounded-t-card",
-        stopHit || nearStop ? "bg-gradient-to-r from-accent-red/50 to-transparent" :
-        targetHit           ? "bg-gradient-to-r from-accent-green/50 to-transparent" :
-                              "bg-gradient-to-r from-accent-blue/40 to-transparent",
+        stopHit || nearStop ? "bg-gradient-to-r from-destructive/50 to-transparent" :
+        targetHit           ? "bg-gradient-to-r from-primary/50 to-transparent" :
+                              "bg-gradient-to-r from-ring/40 to-transparent",
       )} />
 
       <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <span className="font-mono text-lg font-semibold text-text-primary ticker-glow cursor-default">
+            <span className="font-mono text-lg font-semibold text-foreground cursor-default">
               {position.ticker}
             </span>
-            <div className="text-text-tertiary text-[11px] mt-0.5 font-mono">
+            <div className="text-muted-foreground text-[11px] mt-0.5 font-mono">
               {position.quantity} shares · {holdDays}d held
             </div>
           </div>
@@ -85,10 +85,10 @@ export function PositionCard({ position, style }: Props) {
               variant={pnlPos ? "win" : "loss"}
               className="h-auto px-3 py-1.5 rounded-lg text-right flex flex-col items-end"
             >
-              <div className={cn("font-mono text-sm font-semibold", pnlPos ? "text-accent-green" : "text-accent-red")}>
+              <div className={cn("font-mono text-sm font-semibold", pnlPos ? "text-primary" : "text-destructive")}>
                 {pnlPos ? "+" : ""}${pnl.toFixed(2)}
               </div>
-              <div className={cn("font-mono text-[10px]", pnlPos ? "text-accent-green/70" : "text-accent-red/70")}>
+              <div className={cn("font-mono text-[10px]", pnlPos ? "text-primary/70" : "text-destructive/70")}>
                 {pnlPos ? "+" : ""}{pnlPct!.toFixed(2)}%
               </div>
             </Badge>
@@ -97,24 +97,24 @@ export function PositionCard({ position, style }: Props) {
 
         {/* Price grid */}
         <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="bg-bg-tertiary rounded-lg p-2.5">
-            <div className="text-text-muted text-[9px] uppercase tracking-widest mb-1 font-mono">Entry</div>
-            <div className="font-mono text-xs text-text-primary">${entry.toFixed(2)}</div>
+          <div className="bg-muted rounded-lg p-2.5">
+            <div className="text-muted-foreground text-[9px] uppercase tracking-widest mb-1 font-mono">Entry</div>
+            <div className="font-mono text-xs text-foreground">${entry.toFixed(2)}</div>
           </div>
-          <div className="bg-bg-tertiary rounded-lg p-2.5">
-            <div className="text-text-muted text-[9px] uppercase tracking-widest mb-1 font-mono">Current</div>
+          <div className="bg-muted rounded-lg p-2.5">
+            <div className="text-muted-foreground text-[9px] uppercase tracking-widest mb-1 font-mono">Current</div>
             <div className={cn(
               "font-mono text-xs",
               currentPrice !== null
-                ? currentPrice >= entry ? "text-accent-green" : "text-accent-red"
-                : "text-text-tertiary",
+                ? currentPrice >= entry ? "text-primary" : "text-destructive"
+                : "text-muted-foreground",
             )}>
               {currentPrice !== null ? `$${currentPrice.toFixed(2)}` : "—"}
             </div>
           </div>
-          <div className="bg-bg-tertiary rounded-lg p-2.5">
-            <div className="text-text-muted text-[9px] uppercase tracking-widest mb-1 font-mono">Cost</div>
-            <div className="font-mono text-xs text-text-secondary">
+          <div className="bg-muted rounded-lg p-2.5">
+            <div className="text-muted-foreground text-[9px] uppercase tracking-widest mb-1 font-mono">Cost</div>
+            <div className="font-mono text-xs text-muted-foreground">
               ${(entry * position.quantity).toFixed(0)}
             </div>
           </div>
@@ -123,12 +123,12 @@ export function PositionCard({ position, style }: Props) {
         {/* Stop / Target */}
         <div className="flex gap-4 mb-4 text-[11px]">
           {stopLoss && (
-            <span className={cn("font-mono", stopHit || nearStop ? "text-accent-red" : "text-text-tertiary")}>
+            <span className={cn("font-mono", stopHit || nearStop ? "text-destructive" : "text-muted-foreground")}>
               Stop: <span className={stopHit || nearStop ? "font-semibold" : ""}>${stopLoss.toFixed(2)}</span>
             </span>
           )}
           {targetPrice && (
-            <span className={cn("font-mono", targetHit ? "text-accent-green" : "text-text-tertiary")}>
+            <span className={cn("font-mono", targetHit ? "text-primary" : "text-muted-foreground")}>
               Target: <span className={targetHit ? "font-semibold" : ""}>${targetPrice.toFixed(2)}</span>
             </span>
           )}
@@ -137,7 +137,7 @@ export function PositionCard({ position, style }: Props) {
         {/* Data quality warning */}
         {liveQuote?.data_warning && (
           <Alert
-            className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed bg-accent-amber/10 border-accent-amber/25 text-accent-amber"
+            className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed bg-status-after/10 border-status-after/25 text-status-after"
             title={(liveQuote.data_warning as string[]).join("\n")}
           >
             <AlertDescription>
@@ -150,9 +150,9 @@ export function PositionCard({ position, style }: Props) {
         {(stopHit || nearStop || targetHit) && (
           <Alert className={cn(
             "mb-3 px-3 py-2 rounded-lg text-[11px]",
-            stopHit   ? "bg-accent-red/10 border-accent-red/25 text-accent-red" :
+            stopHit   ? "bg-destructive/10 border-destructive/25 text-destructive" :
             nearStop  ? "bg-orange-500/10 border-orange-500/25 text-orange-400" :
-                        "bg-accent-green/10 border-accent-green/25 text-accent-green",
+                        "bg-primary/10 border-primary/25 text-primary",
           )}>
             <AlertDescription>
               {stopHit   ? "Stop loss hit — consider exiting position" :
@@ -171,7 +171,7 @@ export function PositionCard({ position, style }: Props) {
               placeholder="Exit price"
               value={exitPrice}
               onChange={(e) => setExitPrice(e.target.value)}
-              className="flex-1 bg-bg-tertiary text-text-primary font-mono text-sm h-9"
+              className="flex-1 bg-muted text-foreground font-mono text-sm h-9"
             />
             <Button
               variant="destructive"
@@ -193,7 +193,7 @@ export function PositionCard({ position, style }: Props) {
         <Button
           variant="outline"
           onClick={() => setShowClose(!showClose)}
-          className="w-full text-xs hover:bg-accent-red/10 hover:text-accent-red hover:border-accent-red/20"
+          className="w-full text-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
         >
           {showClose ? "Cancel" : "Close Position"}
         </Button>

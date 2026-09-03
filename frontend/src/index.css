@@ -6,75 +6,61 @@
 
 @layer base {
   :root {
-    /* ── SwingIQ custom palette (dark) ──────────────────── */
-    --bg-void:    #080B12;
-    --bg-base:    #0C1018;
-    --bg-surface: #111827;
-    --bg-elevated:#161E2E;
+    /* ── Shadcn core ─────────────────────────────────────── */
+    --background:           210 40% 96%;    /* slate-100 */
+    --foreground:           222 47% 11%;    /* slate-900 */
+    --card:                 0 0% 100%;      /* white */
+    --card-foreground:      222 47% 11%;
+    --popover:              0 0% 100%;
+    --popover-foreground:   222 47% 11%;
+    --primary:              142 72% 29%;    /* green-700 */
+    --primary-foreground:   0 0% 100%;
+    --secondary:            210 40% 96%;    /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+    --destructive:          0 72% 51%;      /* red-600 */
+    --destructive-foreground: 0 0% 100%;
+    --muted:                210 40% 96%;    /* slate-100 */
+    --muted-foreground:     215 16% 47%;    /* slate-500 */
+    --accent:               210 40% 96%;
+    --accent-foreground:    222 47% 11%;
+    --border:               214 32% 91%;    /* slate-200 */
+    --input:                213 27% 84%;    /* slate-300 */
+    --ring:                 142 72% 29%;    /* green-700 */
+    --radius:               0.5rem;
 
-    --border-subtle:  rgba(255,255,255,0.05);
-    --border-default: rgba(255,255,255,0.09);
-    --border-strong:  rgba(255,255,255,0.16);
+    /* ── Signal badges ───────────────────────────────────── */
+    --signal-buy-bg:        138 76% 97%;    /* green-50 */
+    --signal-buy-border:    141 79% 85%;    /* green-200 */
+    --signal-buy-fg:        143 64% 24%;    /* green-800 */
+    --signal-sell-bg:       0 86% 97%;      /* red-50 */
+    --signal-sell-border:   0 96% 89%;      /* red-200 */
+    --signal-sell-fg:       0 70% 35%;      /* red-800 */
+    --signal-hold-bg:       210 40% 96%;    /* slate-100 */
+    --signal-hold-border:   214 32% 91%;    /* slate-200 */
+    --signal-hold-fg:       215 19% 35%;    /* slate-600 */
 
-    --green:  #10B981;
-    --red:    #F43F5E;
-    --amber:  #F59E0B;
-    --blue:   #3B82F6;
-    --purple: #8B5CF6;
+    /* ── Price levels ────────────────────────────────────── */
+    --price-target:         142 72% 29%;    /* green-700 */
+    --price-stop:           0 74% 42%;      /* red-700 */
 
-    --text-primary:   #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-muted:     #7C8AA0;
-    --text-disabled:  #475569;
+    /* ── Confidence ──────────────────────────────────────── */
+    --conf-track:           214 32% 91%;    /* slate-200 */
+    --conf-fill:            215 20% 65%;    /* slate-400 */
 
-    /* ── shadcn theme (dark) ─────────────────────────────── */
-    --background:    oklch(0.145 0.005 285);    /* #0C1018 */
-    --foreground:    oklch(0.97 0 0);           /* #F8FAFC */
-    --card:    oklch(0.185 0.01 260);           /* #111827 */
-    --card-foreground:    oklch(0.97 0 0);
-    --popover:    oklch(0.205 0.012 260);       /* #161E2E */
-    --popover-foreground:    oklch(0.97 0 0);
-    --primary:    oklch(0.546 0.245 262.881);   /* #3B82F6 blue */
-    --primary-foreground:    oklch(0.985 0 0);
-    --secondary:    oklch(0.205 0.012 260);
-    --secondary-foreground:    oklch(0.9 0 0);
-    --muted:    oklch(0.205 0.012 260);
-    --muted-foreground:    oklch(0.556 0 0);
-    --accent:    oklch(0.205 0.012 260);
-    --accent-foreground:    oklch(0.9 0 0);
-    --destructive:    oklch(0.577 0.245 27.325); /* red */
-    --border:    oklch(0.25 0.01 260);
-    --input:    oklch(0.25 0.01 260);
-    --ring:    oklch(0.546 0.245 262.881);      /* blue ring */
-    --chart-1:    oklch(0.269 0 0);
-    --chart-2:    oklch(0.371 0 0);
-    --chart-3:    oklch(0.439 0 0);
-    --chart-4:    oklch(0.556 0 0);
-    --chart-5:    oklch(0.87 0 0);
-    --radius:    0.625rem;
-    --sidebar:    oklch(0.185 0.01 260);        /* dark sidebar */
-    --sidebar-foreground:    oklch(0.97 0 0);
-    --sidebar-primary:    oklch(0.546 0.245 262.881);
-    --sidebar-primary-foreground:    oklch(0.985 0 0);
-    --sidebar-accent:    oklch(0.205 0.012 260);
-    --sidebar-accent-foreground:    oklch(0.9 0 0);
-    --sidebar-border:    oklch(0.25 0.01 260);
-    --sidebar-ring:    oklch(0.4 0 0);
-  }
-
-  .theme {
-    --font-heading:    var(--font-sans);
-    --font-sans:    'Roboto', sans-serif;
+    /* ── Market status ───────────────────────────────────── */
+    --status-open:          142 76% 36%;    /* green-600 */
+    --status-after:         38 92% 50%;     /* amber-500 */
+    --status-closed:        215 20% 65%;    /* slate-400 */
   }
 
   * {
-    border-color: var(--border);
-    outline-color: var(--ring);
+    border-color: hsl(var(--border));
   }
+
   body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: "Roboto", sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -82,40 +68,6 @@
 
 /* ── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--bg-void); }
-::-webkit-scrollbar-thumb { background: #1E2A3D; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2A3D57; }
-
-/* ── Card hover glow ─────────────────────────────────── */
-.card-hover {
-  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
-}
-.card-hover:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-}
-
-/* ── Ticker glow ─────────────────────────────────────── */
-.ticker-glow:hover {
-  color: #60a5fa;
-  text-shadow: 0 0 16px rgba(59,130,246,0.5);
-}
-
-/* ── Pulse ring (for EXIT alerts) ────────────────────── */
-@keyframes pulse-ring {
-  0%   { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-.animate-pulse-ring::before {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  border: 2px solid var(--red);
-  animation: pulse-ring 1.5s ease-out infinite;
-}
-
-/* ── Subtle glow on signal cards ─────────────────────── */
-.glow-green { box-shadow: 0 0 0 1px rgba(16,185,129,0.12), 0 4px 20px rgba(16,185,129,0.06); }
-.glow-red   { box-shadow: 0 0 0 1px rgba(244,63,94,0.12),  0 4px 20px rgba(244,63,94,0.06);  }
-.glow-amber { box-shadow: 0 0 0 1px rgba(245,158,11,0.12), 0 4px 20px rgba(245,158,11,0.06); }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(213 27% 84%); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(215 20% 65%); }

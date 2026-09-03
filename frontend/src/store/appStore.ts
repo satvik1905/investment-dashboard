@@ -7,8 +7,8 @@ interface AppState {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 
-  activeTab: "dashboard" | "watchlist" | "news" | "journal" | "scanner";
-  setActiveTab: (tab: "dashboard" | "watchlist" | "news" | "journal" | "scanner") => void;
+  activeTab: "dashboard" | "watchlist" | "news" | "scanner";
+  setActiveTab: (tab: "dashboard" | "watchlist" | "news" | "scanner") => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({

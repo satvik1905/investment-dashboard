@@ -70,7 +70,6 @@ export function useClosePosition() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["positions"] });
-      qc.invalidateQueries({ queryKey: ["journal"] });
     },
   });
 }

@@ -35,14 +35,14 @@ export function ConfidenceMeter({ confidence, size = 80 }: Props) {
           cy={cy}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.08)"
+          stroke="hsl(214 32% 91%)" /* conf-track (slate-200) */
           strokeWidth={6}
           strokeDasharray={`${arcLength} ${circumference - arcLength}`}
           strokeDashoffset={circumference * 0.125}
           strokeLinecap="round"
           transform={`rotate(90 ${cx} ${cy})`}
         />
-        {/* Arc */}
+        {/* Arc -- confidence colors are hardcoded SVG (#22c55e / #f59e0b / #ef4444) */}
         {confidence > 0 && (
           <path
             d={`M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`}
@@ -57,9 +57,9 @@ export function ConfidenceMeter({ confidence, size = 80 }: Props) {
           x={cx}
           y={cy + 5}
           textAnchor="middle"
-          fill="#F8FAFC"
+          fill="hsl(222 47% 11%)"
           fontSize={size * 0.22}
-          fontFamily="Roboto Mono, monospace"
+          fontFamily="var(--font-geist-mono, monospace)"
           fontWeight="500"
         >
           {confidence}
@@ -68,9 +68,9 @@ export function ConfidenceMeter({ confidence, size = 80 }: Props) {
           x={cx}
           y={cy + size * 0.22}
           textAnchor="middle"
-          fill="var(--text-disabled)"
+          fill="hsl(215 16% 47%)"
           fontSize={size * 0.14}
-          fontFamily="Roboto, sans-serif"
+          fontFamily="var(--font-geist-sans, sans-serif)"
         >
           %
         </text>

@@ -85,12 +85,12 @@ export function TickerAutocomplete({ value, onChange, onSelect, onSubmit, disabl
             onFocus={() => suggestions.length > 0 && setOpen(true)}
             disabled={disabled}
             autoComplete="off"
-            className="w-full bg-bg-secondary text-text-primary font-mono text-sm px-4 py-2.5 h-auto rounded-xl placeholder:text-text-tertiary"
+            className="w-full bg-card text-foreground font-mono text-sm px-4 py-2.5 h-auto rounded-xl placeholder:text-muted-foreground"
           />
 
           {loading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-3.5 h-3.5 border-2 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
+              <div className="w-3.5 h-3.5 border-2 border-ring/30 border-t-ring rounded-full animate-spin" />
             </div>
           )}
         </div>
@@ -112,13 +112,13 @@ export function TickerAutocomplete({ value, onChange, onSelect, onSubmit, disabl
                   onSelect={() => handleSelect(t.symbol)}
                   onMouseEnter={() => setActiveIndex(i)}
                   className={`flex items-center gap-3 px-4 py-2.5 ${
-                    i === activeIndex ? "bg-accent-blue/15" : ""
+                    i === activeIndex ? "bg-accent" : ""
                   }`}
                 >
-                  <span className="font-mono text-sm font-semibold text-text-primary w-20 shrink-0">
+                  <span className="font-mono text-sm font-semibold text-foreground w-20 shrink-0">
                     {t.symbol}
                   </span>
-                  <span className="text-text-secondary text-xs truncate">{t.name}</span>
+                  <span className="text-muted-foreground text-xs truncate">{t.name}</span>
                 </CommandItem>
               ))}
             </CommandList>

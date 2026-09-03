@@ -78,18 +78,18 @@ function formatDateTime(isoDate: string): string {
 function ProgressBar({ progress }: { progress: ScanProgress }) {
   const pct = Math.min(100, Math.max(0, progress.progress));
   return (
-    <div className="bg-bg-secondary rounded-xl border border-black/[0.10] p-6">
+    <div className="bg-card rounded-xl border border-black/[0.10] p-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-2 h-2 rounded-full bg-accent-blue animate-pulse" />
-        <span className="text-text-primary font-mono text-sm font-medium">Scanning market...</span>
-        <span className="ml-auto text-text-secondary font-mono text-sm">
+        <div className="w-2 h-2 rounded-full bg-ring animate-pulse" />
+        <span className="text-foreground font-mono text-sm font-medium">Scanning market...</span>
+        <span className="ml-auto text-muted-foreground font-mono text-sm">
           {progress.tickers_scanned.toLocaleString()} / {progress.total_tickers.toLocaleString()} stocks
         </span>
       </div>
       <Progress value={pct} className="h-2 mb-3" />
       <div className="flex items-center justify-between">
-        <span className="text-text-tertiary text-xs font-mono">{progress.message}</span>
-        <span className="text-text-secondary text-xs font-mono font-bold">{pct}%</span>
+        <span className="text-muted-foreground text-xs font-mono">{progress.message}</span>
+        <span className="text-muted-foreground text-xs font-mono font-bold">{pct}%</span>
       </div>
     </div>
   );
@@ -112,14 +112,14 @@ function PriorTrendBar({
       {Array.from({ length: filled }).map((_, i) => (
         <div key={i} className={`w-2 h-3 rounded-sm ${color}`} />
       ))}
-      {n > 12 && <span className="text-text-tertiary text-xs font-mono">+{n - 12}</span>}
-      <span className="text-text-secondary text-xs font-mono ml-1">{n}{unit}</span>
+      {n > 12 && <span className="text-muted-foreground text-xs font-mono">+{n - 12}</span>}
+      <span className="text-muted-foreground text-xs font-mono ml-1">{n}{unit}</span>
     </div>
   );
 }
 
 function RsiBadge({ rsi, candle_type }: { rsi: number | null; candle_type: "RED" | "YELLOW" }) {
-  if (rsi == null) return <span className="text-text-tertiary font-mono text-sm">—</span>;
+  if (rsi == null) return <span className="text-muted-foreground font-mono text-sm">—</span>;
 
   const isOversold = candle_type === "RED" && rsi < 35;
   const isOverbought = candle_type === "YELLOW" && rsi > 65;
@@ -138,7 +138,7 @@ function RsiBadge({ rsi, candle_type }: { rsi: number | null; candle_type: "RED"
       </Badge>
     );
   }
-  return <span className="text-text-secondary font-mono text-sm">{fmt(rsi, 0)}</span>;
+  return <span className="text-muted-foreground font-mono text-sm">{fmt(rsi, 0)}</span>;
 }
 
 
@@ -146,10 +146,10 @@ function MonthlyTooltipInfo() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="text-text-tertiary text-[10px] cursor-help">ⓘ</span>
+        <span className="text-muted-foreground text-[10px] cursor-help">ⓘ</span>
       </TooltipTrigger>
       <TooltipContent className="w-56 text-[11px] leading-relaxed">
-        <span className="text-accent-green font-semibold block mb-1">Monthly Red Candles are rare</span>
+        <span className="text-primary font-semibold block mb-1">Monthly Red Candles are rare</span>
         Monthly red candles signal a major trend reversal on the monthly timeframe that could last{" "}
         <span className="font-semibold">weeks to months</span>. Far more significant than weekly signals.
       </TooltipContent>
@@ -176,7 +176,7 @@ function ResultRow({
   return (
     <TableRow
       className={
-        isMultiTimeframe ? "bg-yellow-500/[0.03]" : isSpike ? "bg-accent-blue/[0.03]" : ""
+        isMultiTimeframe ? "bg-yellow-500/[0.03]" : isSpike ? "bg-ring/[0.03]" : ""
       }
     >
       {/* Ticker */}
@@ -185,8 +185,8 @@ function ResultRow({
           <span
             onClick={() => onTickerClick(row.ticker)}
             className={`text-sm font-mono font-bold tracking-wide ${
-              isRed ? "text-accent-green" : row.candle_type === "YELLOW" ? "text-accent-amber" : "text-text-primary"
-            } ticker-glow cursor-pointer`}
+              isRed ? "text-primary" : row.candle_type === "YELLOW" ? "text-status-after" : "text-foreground"
+            } cursor-pointer`}
           >
             {row.ticker}
           </span>
@@ -196,22 +196,22 @@ function ResultRow({
             </Badge>
           )}
           {isSpike && !isMultiTimeframe && (
-            <Badge variant="outline" className="text-[9px] font-mono uppercase tracking-wider bg-accent-blue/20 border-accent-blue/30 text-accent-blue">
+            <Badge variant="outline" className="text-[9px] font-mono uppercase tracking-wider bg-ring/20 border-ring/30 text-ring">
               Vol↑
             </Badge>
           )}
         </div>
         {row.company_name && (
-          <div className="text-text-tertiary text-xs truncate max-w-[120px]">{row.company_name}</div>
+          <div className="text-muted-foreground text-xs truncate max-w-[120px]">{row.company_name}</div>
         )}
         {row.monthly_candle_color && (
-          <div className="text-[10px] font-mono text-text-tertiary mt-0.5">
+          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
             monthly:{" "}
-            <span className={row.monthly_candle_color === "RED" ? "text-accent-green" : "text-accent-amber"}>
+            <span className={row.monthly_candle_color === "RED" ? "text-primary" : "text-status-after"}>
               {row.monthly_candle_color}
             </span>
             {row.monthly_months_since_flip != null && (
-              <span className="text-text-tertiary"> · {row.monthly_months_since_flip === 0 ? "this month" : row.monthly_months_since_flip + "mo ago"}</span>
+              <span className="text-muted-foreground"> · {row.monthly_months_since_flip === 0 ? "this month" : row.monthly_months_since_flip + "mo ago"}</span>
             )}
           </div>
         )}
@@ -219,14 +219,14 @@ function ResultRow({
 
       {/* Price */}
       <TableCell className="py-3 text-right pr-4">
-        <span className="font-mono text-sm text-text-primary">{fmtPrice(row.current_price)}</span>
+        <span className="font-mono text-sm text-foreground">{fmtPrice(row.current_price)}</span>
       </TableCell>
 
       {/* Week % */}
       <TableCell className="py-3 text-right pr-4">
         <span
           className={`font-mono text-sm font-medium ${
-            changePositive ? "text-accent-green" : "text-accent-red"
+            changePositive ? "text-primary" : "text-destructive"
           }`}
         >
           {changePositive ? "+" : ""}
@@ -237,7 +237,7 @@ function ResultRow({
       {/* Prior trend / Recency */}
       <TableCell className="py-3 pr-4">
         {isMonthlyView ? (
-          <span className="font-mono text-sm text-text-secondary">
+          <span className="font-mono text-sm text-muted-foreground">
             {row.monthly_months_since_flip === 0
               ? "this month"
               : row.monthly_months_since_flip != null
@@ -253,7 +253,7 @@ function ResultRow({
       <TableCell className="py-3 text-right pr-4">
         <span
           className={`font-mono text-sm ${
-            isSpike ? "text-accent-blue font-semibold" : "text-text-secondary"
+            isSpike ? "text-ring font-semibold" : "text-muted-foreground"
           }`}
         >
           {fmt(row.volume_ratio)}x
@@ -271,7 +271,7 @@ function ResultRow({
           variant="outline"
           size="xs"
           onClick={() => onAddToWatchlist(row.ticker)}
-          className="bg-accent-blue/15 border-accent-blue/30 text-accent-blue hover:bg-accent-blue/25 font-mono"
+          className="bg-ring/15 border-ring/30 text-ring hover:bg-ring/25 font-mono"
         >
           + Add
         </Button>
@@ -478,16 +478,16 @@ export function Scanner() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight mb-1">
+          <h1 className="font-sans text-2xl font-bold text-foreground tracking-tight mb-1">
             Candle Scanner
           </h1>
-          <p className="text-text-secondary text-sm">
+          <p className="text-muted-foreground text-sm">
             Finds stocks where the weekly trend just reversed — Danny Cheng EMA crossover system
           </p>
-          <div className="flex items-center gap-4 mt-2 text-xs font-mono text-text-tertiary">
+          <div className="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground">
             {latestDate && (
               <span>
-                Last scan: <span className="text-text-secondary">{formatDateTime(latestDate)}</span>
+                Last scan: <span className="text-muted-foreground">{formatDateTime(latestDate)}</span>
               </span>
             )}
             {!isWeeklyCandleClosed && (
@@ -501,7 +501,7 @@ export function Scanner() {
           variant="outline"
           onClick={handleRunScanner}
           disabled={isScanning}
-          className="bg-accent-green/10 border-accent-green/25 text-accent-green hover:bg-accent-green/20 font-mono shrink-0"
+          className="bg-primary/10 border-primary/25 text-primary hover:bg-primary/20 font-mono shrink-0"
         >
           <span className={isScanning ? "animate-spin" : ""}>◎</span>
           {isScanning ? "Scanning..." : "Run Scanner Now"}
@@ -518,23 +518,23 @@ export function Scanner() {
       {/* No results yet — empty state */}
       {!isScanning && !hasResults && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-full bg-bg-secondary border border-black/[0.10] flex items-center justify-center text-3xl mb-4">
+          <div className="w-16 h-16 rounded-full bg-card border border-black/[0.10] flex items-center justify-center text-3xl mb-4">
             {scanWasRun ? "◉" : "◎"}
           </div>
           {scanWasRun ? (
             <>
-              <h2 className="text-text-primary font-semibold text-lg mb-2">No EMA crossovers this week</h2>
-              <p className="text-text-secondary text-sm max-w-sm leading-relaxed mb-2">
+              <h2 className="text-foreground font-semibold text-lg mb-2">No EMA crossovers this week</h2>
+              <p className="text-muted-foreground text-sm max-w-sm leading-relaxed mb-2">
                 All 511 stocks were scanned — none had a weekly EMA 13/34 crossover on the most recent candle.
               </p>
-              <p className="text-text-tertiary text-xs max-w-xs leading-relaxed mb-6">
+              <p className="text-muted-foreground text-xs max-w-xs leading-relaxed mb-6">
                 This is common during sustained market trends. Most stocks are currently in a downtrend with no reversals yet. Check back after Friday's close.
               </p>
             </>
           ) : (
             <>
-              <h2 className="text-text-primary font-semibold text-lg mb-2">No scan available yet</h2>
-              <p className="text-text-secondary text-sm max-w-xs leading-relaxed mb-6">
+              <h2 className="text-foreground font-semibold text-lg mb-2">No scan available yet</h2>
+              <p className="text-muted-foreground text-sm max-w-xs leading-relaxed mb-6">
                 The scanner runs automatically every Friday at 4:15 PM EST after the weekly candle closes.
               </p>
             </>
@@ -542,7 +542,7 @@ export function Scanner() {
           <Button
             variant="outline"
             onClick={handleRunScanner}
-            className="bg-accent-green/10 border-accent-green/25 text-accent-green hover:bg-accent-green/20 font-mono"
+            className="bg-primary/10 border-primary/25 text-primary hover:bg-primary/20 font-mono"
           >
             Run Scanner Now
           </Button>
@@ -557,13 +557,13 @@ export function Scanner() {
             <div className="flex items-center gap-1 flex-wrap">
               <TabsList variant="line" className="h-auto flex-wrap">
                 <TabsTrigger value="RED" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
-                  <span className="w-2 h-2 rounded-full bg-accent-green inline-block" />
+                  <span className="w-2 h-2 rounded-full bg-primary inline-block" />
                   Weekly Red
                   <Badge variant="outline" className="text-xs">{redResults.length}</Badge>
                 </TabsTrigger>
 
                 <TabsTrigger value="YELLOW" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
-                  <span className="w-2 h-2 rounded-full bg-accent-amber inline-block" />
+                  <span className="w-2 h-2 rounded-full bg-status-after inline-block" />
                   Weekly Yellow
                   <Badge variant="outline" className="text-xs">{yellowResults.length}</Badge>
                 </TabsTrigger>
@@ -587,35 +587,35 @@ export function Scanner() {
           </Tabs>
 
           {/* Legend */}
-          <div className="mb-4 p-3 rounded-lg bg-bg-secondary border border-black/[0.08] text-xs text-text-tertiary font-mono leading-relaxed">
+          <div className="mb-4 p-3 rounded-lg bg-card border border-black/[0.08] text-xs text-muted-foreground font-mono leading-relaxed">
             {activeCandle === "RED" && (
               <>
-                <span className="text-accent-green font-semibold">● Weekly Red</span> — EMA 13 just crossed{" "}
-                <strong className="text-text-secondary">above</strong> EMA 34 on the weekly chart. Prior downtrend ending. Potential BUY setup.
+                <span className="text-primary font-semibold">● Weekly Red</span> — EMA 13 just crossed{" "}
+                <strong className="text-muted-foreground">above</strong> EMA 34 on the weekly chart. Prior downtrend ending. Potential BUY setup.
                 Prior trend bar shows <span className="text-[#00FFFF]">cyan weeks</span> in downtrend before the cross.
               </>
             )}
             {activeCandle === "YELLOW" && (
               <>
-                <span className="text-accent-amber font-semibold">● Weekly Yellow</span> — EMA 13 just crossed{" "}
-                <strong className="text-text-secondary">below</strong> EMA 34 on the weekly chart. Prior uptrend ending. Potential SELL/avoid setup.
-                Prior trend bar shows <span className="text-accent-blue">blue weeks</span> in uptrend before the cross.
+                <span className="text-status-after font-semibold">● Weekly Yellow</span> — EMA 13 just crossed{" "}
+                <strong className="text-muted-foreground">below</strong> EMA 34 on the weekly chart. Prior uptrend ending. Potential SELL/avoid setup.
+                Prior trend bar shows <span className="text-ring">blue weeks</span> in uptrend before the cross.
               </>
             )}
             {activeCandle === "MONTHLY_RED" && (
               <>
-                <span className="text-accent-green font-semibold">📅 Monthly Red</span> — EMA 13 just crossed{" "}
-                <strong className="text-text-secondary">above</strong> EMA 34 on the <strong className="text-text-secondary">monthly</strong> chart.
+                <span className="text-primary font-semibold">📅 Monthly Red</span> — EMA 13 just crossed{" "}
+                <strong className="text-muted-foreground">above</strong> EMA 34 on the <strong className="text-muted-foreground">monthly</strong> chart.
                 These are rare and extremely significant — a major trend reversal that could last weeks to months.
-                {" "}<span className="text-accent-purple font-semibold">⭐ gold badge</span> = also has a weekly crossover (highest conviction).
+                {" "}<span className="text-violet-600 font-semibold">⭐ gold badge</span> = also has a weekly crossover (highest conviction).
               </>
             )}
             {activeCandle === "MONTHLY_YELLOW" && (
               <>
-                <span className="text-accent-amber font-semibold">📅 Monthly Yellow</span> — EMA 13 just crossed{" "}
-                <strong className="text-text-secondary">below</strong> EMA 34 on the <strong className="text-text-secondary">monthly</strong> chart.
+                <span className="text-status-after font-semibold">📅 Monthly Yellow</span> — EMA 13 just crossed{" "}
+                <strong className="text-muted-foreground">below</strong> EMA 34 on the <strong className="text-muted-foreground">monthly</strong> chart.
                 A major trend reversal to the downside. Avoid or consider shorting.
-                {" "}<span className="text-accent-purple font-semibold">⭐ gold badge</span> = also has a weekly crossover (highest conviction).
+                {" "}<span className="text-violet-600 font-semibold">⭐ gold badge</span> = also has a weekly crossover (highest conviction).
               </>
             )}
           </div>
@@ -626,7 +626,7 @@ export function Scanner() {
               type="single"
               value={filterMode}
               onValueChange={(v) => v && setFilterMode(v)}
-              className="bg-bg-secondary border border-black/[0.08] rounded-lg p-1"
+              className="bg-card border border-black/[0.08] rounded-lg p-1"
             >
               <ToggleGroupItem value="all" className="px-3 py-1 text-xs font-mono">All</ToggleGroupItem>
               <ToggleGroupItem value="volume_spike" className="px-3 py-1 text-xs font-mono">Volume Spike</ToggleGroupItem>
@@ -637,9 +637,9 @@ export function Scanner() {
               type="single"
               value={sortMode}
               onValueChange={(v) => v && setSortMode(v)}
-              className="bg-bg-secondary border border-black/[0.08] rounded-lg p-1"
+              className="bg-card border border-black/[0.08] rounded-lg p-1"
             >
-              <span className="text-text-tertiary text-xs font-mono px-2">Sort:</span>
+              <span className="text-muted-foreground text-xs font-mono px-2">Sort:</span>
               <ToggleGroupItem value="prior_candles" className="px-3 py-1 text-xs font-mono">Prior Trend</ToggleGroupItem>
               <ToggleGroupItem value="volume" className="px-3 py-1 text-xs font-mono">Volume</ToggleGroupItem>
               <ToggleGroupItem value="change" className="px-3 py-1 text-xs font-mono">% Change</ToggleGroupItem>
@@ -647,19 +647,19 @@ export function Scanner() {
 
             {/* Date picker */}
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-text-tertiary text-xs font-mono">View scan from:</span>
+              <span className="text-muted-foreground text-xs font-mono">View scan from:</span>
               <Input
                 type="date"
                 value={scanDateOverride}
                 onChange={(e) => setScanDateOverride(e.target.value)}
-                className="bg-bg-secondary text-text-secondary text-xs font-mono w-auto"
+                className="bg-card text-muted-foreground text-xs font-mono w-auto"
               />
               {scanDateOverride && (
                 <Button
                   variant="ghost"
                   size="xs"
                   onClick={() => setScanDateOverride("")}
-                  className="text-text-tertiary hover:text-text-secondary text-xs font-mono"
+                  className="text-muted-foreground hover:text-muted-foreground text-xs font-mono"
                 >
                   ✕ Clear
                 </Button>
@@ -675,20 +675,20 @@ export function Scanner() {
               ))}
             </div>
           ) : activeResults.length === 0 ? (
-            <div className="text-center py-12 text-text-tertiary font-mono text-sm">
+            <div className="text-center py-12 text-muted-foreground font-mono text-sm">
               No {activeCandle.toLowerCase()} candle stocks match the current filter.
             </div>
           ) : (
-            <div className="bg-bg-secondary rounded-xl border border-black/[0.10] overflow-hidden">
+            <div className="bg-card rounded-xl border border-black/[0.10] overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-left pl-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Ticker</TableHead>
-                    <TableHead className="text-right pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Price</TableHead>
-                    <TableHead className="text-right pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Week %</TableHead>
-                    <TableHead className="text-left pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Prior Trend</TableHead>
-                    <TableHead className="text-right pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">Volume</TableHead>
-                    <TableHead className="text-left pr-4 text-text-tertiary text-xs font-mono font-medium uppercase tracking-wider">RSI</TableHead>
+                    <TableHead className="text-left pl-4 text-muted-foreground text-xs font-mono font-medium uppercase tracking-wider">Ticker</TableHead>
+                    <TableHead className="text-right pr-4 text-muted-foreground text-xs font-mono font-medium uppercase tracking-wider">Price</TableHead>
+                    <TableHead className="text-right pr-4 text-muted-foreground text-xs font-mono font-medium uppercase tracking-wider">Week %</TableHead>
+                    <TableHead className="text-left pr-4 text-muted-foreground text-xs font-mono font-medium uppercase tracking-wider">Prior Trend</TableHead>
+                    <TableHead className="text-right pr-4 text-muted-foreground text-xs font-mono font-medium uppercase tracking-wider">Volume</TableHead>
+                    <TableHead className="text-left pr-4 text-muted-foreground text-xs font-mono font-medium uppercase tracking-wider">RSI</TableHead>
                     <TableHead className="pr-4" />
                   </TableRow>
                 </TableHeader>
@@ -704,7 +704,7 @@ export function Scanner() {
                   ))}
                 </TableBody>
               </Table>
-              <div className="px-4 py-3 border-t border-black/[0.06] text-text-tertiary text-xs font-mono">
+              <div className="px-4 py-3 border-t border-black/[0.06] text-muted-foreground text-xs font-mono">
                 {activeResults.length} stocks · scan date: {resolvedDate ?? latestDate ?? "—"}
               </div>
             </div>
@@ -714,17 +714,17 @@ export function Scanner() {
 
       {/* Add to watchlist feedback */}
       {generateSignalMutation.isPending && (
-        <div className="fixed bottom-6 right-6 bg-bg-secondary border border-accent-blue/30 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3 z-40">
-          <div className="w-2 h-2 rounded-full bg-accent-blue animate-pulse" />
-          <span className="text-text-primary text-sm font-mono">
+        <div className="fixed bottom-6 right-6 bg-card border border-ring/30 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3 z-40">
+          <div className="w-2 h-2 rounded-full bg-ring animate-pulse" />
+          <span className="text-foreground text-sm font-mono">
             Adding to watchlist &amp; generating signal...
           </span>
         </div>
       )}
       {addError && (
-        <div className="fixed bottom-6 right-6 bg-bg-secondary border border-accent-amber/30 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3 z-40">
-          <span className="text-accent-amber text-sm font-mono">⚠ {addError}</span>
-          <Button variant="ghost" size="icon-xs" onClick={() => setAddError(null)} className="text-text-tertiary hover:text-text-secondary">✕</Button>
+        <div className="fixed bottom-6 right-6 bg-card border border-status-after/30 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3 z-40">
+          <span className="text-status-after text-sm font-mono">⚠ {addError}</span>
+          <Button variant="ghost" size="icon-xs" onClick={() => setAddError(null)} className="text-muted-foreground hover:text-muted-foreground">✕</Button>
         </div>
       )}
     </div>

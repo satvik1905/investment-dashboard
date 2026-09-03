@@ -36,21 +36,18 @@ const SIGNAL_CFG = {
 
 type SignalColor = "green" | "amber" | "red";
 
-const COLOR_CLASSES: Record<SignalColor, { badge: "buy" | "strongBuy" | "sell" | "strongSell" | "hold"; ring: string; glow: string }> = {
+const COLOR_CLASSES: Record<SignalColor, { badge: "buy" | "strongBuy" | "sell" | "strongSell" | "hold"; ring: string }> = {
   green: {
     badge: "buy",
-    ring:  "border-accent-green/20",
-    glow:  "glow-green",
+    ring:  "border-primary/20",
   },
   amber: {
     badge: "hold",
-    ring:  "border-accent-amber/20",
-    glow:  "glow-amber",
+    ring:  "border-status-after/20",
   },
   red: {
     badge: "sell",
-    ring:  "border-accent-red/20",
-    glow:  "glow-red",
+    ring:  "border-destructive/20",
   },
 };
 
@@ -88,11 +85,11 @@ function AlertStrip({ level, price, stopLoss, targetPrice, entryLow, entryHigh }
   if (!level || price === null) return null;
   const configs: Record<NonNullable<AlertLevel>, { cls: string; text: React.ReactNode }> = {
     stop_hit: {
-      cls: "bg-accent-red/10 border-accent-red/25 text-accent-red",
+      cls: "bg-destructive/10 border-destructive/25 text-destructive",
       text: <><span className="font-semibold">STOP HIT</span> — Exit now. Invalidated at ${stopLoss?.toFixed(2)}.</>,
     },
     target_hit: {
-      cls: "bg-accent-green/10 border-accent-green/25 text-accent-green",
+      cls: "bg-primary/10 border-primary/25 text-primary",
       text: <><span className="font-semibold">TARGET ${targetPrice?.toFixed(2)}</span> — Take profits now.</>,
     },
     near_stop: {
@@ -100,7 +97,7 @@ function AlertStrip({ level, price, stopLoss, targetPrice, entryLow, entryHigh }
       text: <>Price <span className="font-mono">${price.toFixed(2)}</span> approaching stop <span className="font-mono">${stopLoss?.toFixed(2)}</span></>,
     },
     below_entry: {
-      cls: "bg-accent-amber/10 border-accent-amber/25 text-accent-amber",
+      cls: "bg-status-after/10 border-status-after/25 text-status-after",
       text: <>Below entry zone <span className="font-mono">{entryLow && entryHigh ? `$${entryLow.toFixed(2)}–$${entryHigh.toFixed(2)}` : "—"}</span> — wait.</>,
     },
   };
@@ -119,7 +116,7 @@ function Dir({ dir }: { dir: string | null }) {
   return (
     <span className={cn(
       "font-mono text-[10px]",
-      dir === "UP" ? "text-accent-green" : dir === "DOWN" ? "text-accent-red" : "text-text-tertiary"
+      dir === "UP" ? "text-primary" : dir === "DOWN" ? "text-destructive" : "text-muted-foreground"
     )}>
       {dir === "UP" ? "↑" : dir === "DOWN" ? "↓" : "—"}
     </span>
@@ -195,21 +192,21 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
   return (
     <Card
       className={cn(
-        "relative bg-bg-secondary rounded-card border card-hover",
+        "relative bg-card rounded-card border",
         "transition-colors duration-200 p-0",
-        stopHit           ? "border-accent-red/30 " + colorCls.glow :
-        targetHit         ? "border-accent-green/30 " + colorCls.glow :
+        stopHit           ? "border-destructive/30" :
+        targetHit         ? "border-primary/30" :
         alertLevel === "near_stop" ? "border-orange-500/20" :
-        "border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]",
+        "border-border hover:border-input",
       )}
       style={style}
     >
       {/* Top accent bar based on signal */}
       <div className={cn(
         "h-[2px] w-full rounded-t-card",
-        sigColor === "green" ? "bg-gradient-to-r from-accent-green/60 to-transparent" :
-        sigColor === "red"   ? "bg-gradient-to-r from-accent-red/60 to-transparent" :
-                               "bg-gradient-to-r from-accent-amber/60 to-transparent",
+        sigColor === "green" ? "bg-gradient-to-r from-primary/60 to-transparent" :
+        sigColor === "red"   ? "bg-gradient-to-r from-destructive/60 to-transparent" :
+                               "bg-gradient-to-r from-status-after/60 to-transparent",
       )} />
 
       <CardContent className="p-5">
@@ -217,13 +214,13 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
         <div className="flex items-start justify-between mb-4">
           <div className="min-w-0">
             <div className="flex items-baseline gap-2.5 flex-wrap">
-              <span className="font-mono text-[22px] font-semibold text-text-primary ticker-glow cursor-default leading-none">
+              <span className="font-mono text-[22px] font-semibold text-foreground cursor-default leading-none">
                 {signal.ticker}
               </span>
               {displayPrice !== null && (
                 <span className={cn(
                   "font-mono text-sm transition-colors duration-300 leading-none",
-                  pulsing ? "text-blue-400" : "text-text-secondary",
+                  pulsing ? "text-blue-400" : "text-muted-foreground",
                 )}>
                   ${displayPrice.toFixed(2)}
                 </span>
@@ -231,7 +228,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
               {changePct !== null && (
                 <span className={cn(
                   "font-mono text-xs leading-none",
-                  changePositive ? "text-accent-green" : "text-accent-red",
+                  changePositive ? "text-primary" : "text-destructive",
                 )}>
                   {changePositive ? "+" : ""}{changePct.toFixed(2)}%
                 </span>
@@ -241,11 +238,11 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
             {/* Momentum directions */}
             <div className="flex items-center gap-1.5 mt-2">
               <Dir dir={signal.price_direction_3d} />
-              <span className="text-text-tertiary text-[9px] font-mono">3d</span>
+              <span className="text-muted-foreground text-[9px] font-mono">3d</span>
               <Dir dir={signal.price_direction_7d} />
-              <span className="text-text-tertiary text-[9px] font-mono">7d</span>
+              <span className="text-muted-foreground text-[9px] font-mono">7d</span>
               <Dir dir={signal.price_direction_14d} />
-              <span className="text-text-tertiary text-[9px] font-mono">14d</span>
+              <span className="text-muted-foreground text-[9px] font-mono">14d</span>
             </div>
           </div>
 
@@ -262,10 +259,10 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
               onClick={handleRefresh}
               disabled={refreshing}
               title="Refresh signal"
-              className="text-text-muted hover:text-accent-blue hover:bg-accent-blue/10"
+              className="text-muted-foreground hover:text-ring hover:bg-ring/10"
             >
               {refreshing ? (
-                <span className="w-3 h-3 border-[1.5px] border-accent-blue/30 border-t-accent-blue rounded-full animate-spin block" />
+                <span className="w-3 h-3 border-[1.5px] border-ring/30 border-t-ring rounded-full animate-spin block" />
               ) : (
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                   <path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 3.12 1.5M10 2v2.5H7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -279,7 +276,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
                 variant="ghost"
                 size="icon-xs"
                 onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
-                className="text-text-muted hover:text-accent-red hover:bg-accent-red/10"
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 title="Remove from watchlist"
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
@@ -293,7 +290,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
         {/* Data quality warning */}
         {signal.raw_indicators?.data_warning && (
           <Alert
-            className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed bg-accent-amber/10 border-accent-amber/25 text-accent-amber"
+            className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed bg-status-after/10 border-status-after/25 text-status-after"
             title={(signal.raw_indicators.data_warning as string[]).join("\n")}
           >
             <AlertDescription>
@@ -316,32 +313,32 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
               label: "Entry",
               value: entryLow && entryHigh ? `$${entryLow.toFixed(2)}–${entryHigh.toFixed(2)}` : entryLow ? `$${entryLow.toFixed(2)}` : "—",
               highlight: alertLevel === "below_entry",
-              highlightCls: "bg-accent-amber/8 border border-accent-amber/15",
-              valueCls: alertLevel === "below_entry" ? "text-accent-amber" : "text-text-primary",
+              highlightCls: "bg-status-after/8 border border-status-after/15",
+              valueCls: alertLevel === "below_entry" ? "text-status-after" : "text-foreground",
             },
             {
               label: "Target",
               value: targetPrice ? `$${targetPrice.toFixed(2)}` : "—",
               highlight: targetHit,
-              highlightCls: "bg-accent-green/8 border border-accent-green/15",
-              valueCls: "text-accent-green",
+              highlightCls: "bg-primary/8 border border-primary/15",
+              valueCls: "text-primary",
             },
             {
               label: "Stop",
               value: stopLoss ? `$${stopLoss.toFixed(2)}` : "—",
               highlight: stopHit || alertLevel === "near_stop",
-              highlightCls: "bg-accent-red/8 border border-accent-red/15",
-              valueCls: stopHit || alertLevel === "near_stop" ? "text-accent-red font-semibold" : "text-accent-red",
+              highlightCls: "bg-destructive/8 border border-destructive/15",
+              valueCls: stopHit || alertLevel === "near_stop" ? "text-destructive font-semibold" : "text-destructive",
             },
           ].map((lvl) => (
             <div
               key={lvl.label}
               className={cn(
                 "rounded-lg p-2.5",
-                lvl.highlight ? lvl.highlightCls : "bg-bg-tertiary",
+                lvl.highlight ? lvl.highlightCls : "bg-muted",
               )}
             >
-              <div className="text-text-muted text-[9px] uppercase tracking-widest mb-1 font-mono">
+              <div className="text-muted-foreground text-[9px] uppercase tracking-widest mb-1 font-mono">
                 {lvl.label}
               </div>
               <div className={cn("font-mono text-xs leading-tight", lvl.valueCls)}>
@@ -353,7 +350,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
 
         {/* Danny Cheng state */}
         {dannyLabel && (
-          <div className="text-text-muted text-[10px] font-mono mt-1">{dannyLabel}</div>
+          <div className="text-muted-foreground text-[10px] font-mono mt-1">{dannyLabel}</div>
         )}
       </CardContent>
 
@@ -361,16 +358,16 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
         <DialogContent className="w-80" showCloseButton={false} onClick={(e) => e.stopPropagation()}>
           <DialogHeader className="items-center">
-            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-accent-red/10 border border-accent-red/20 mb-2">
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-destructive/10 border border-destructive/20 mb-2">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M3 5h14M8 5V3.5h4V5M4 5l1 12h10l1-12" stroke="#F43F5E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M3 5h14M8 5V3.5h4V5M4 5l1 12h10l1-12" stroke="hsl(var(--destructive))" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <DialogTitle className="text-text-primary text-center text-sm">
+            <DialogTitle className="text-foreground text-center text-sm">
               Remove {signal.ticker}?
             </DialogTitle>
-            <DialogDescription className="text-text-tertiary text-xs text-center leading-relaxed">
-              This will remove <span className="font-mono text-text-secondary">{signal.ticker}</span> from your watchlist.
+            <DialogDescription className="text-muted-foreground text-xs text-center leading-relaxed">
+              This will remove <span className="font-mono text-foreground">{signal.ticker}</span> from your watchlist.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-3">

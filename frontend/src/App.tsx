@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useAppStore } from "./store/appStore";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./pages/Dashboard";
-import { Journal } from "./pages/Journal";
 import { Scanner } from "./pages/Scanner";
 import { Watchlist } from "./pages/Watchlist";
 import { News } from "./pages/News";
@@ -49,13 +48,13 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-bg-primary">
+    <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-xs">
         <CardHeader className="text-center">
-          <CardTitle className="font-display text-2xl font-bold text-text-primary tracking-tight">
+          <CardTitle className="font-sans text-2xl font-bold text-foreground tracking-tight">
             SwingIQ
           </CardTitle>
-          <CardDescription className="text-text-tertiary text-sm mt-1">
+          <CardDescription className="text-muted-foreground text-sm mt-1">
             Enter password to continue
           </CardDescription>
         </CardHeader>
@@ -67,15 +66,15 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
               value={value}
               onChange={(e) => { setValue(e.target.value); setError(false); }}
               placeholder="Password"
-              className="bg-bg-secondary text-text-primary font-mono text-sm px-4 py-3 h-auto rounded-xl placeholder:text-text-tertiary"
+              className="bg-card text-foreground font-mono text-sm px-4 py-3 h-auto rounded-xl placeholder:text-muted-foreground"
             />
             {error && (
-              <p className="text-accent-red text-xs font-mono text-center">Wrong password</p>
+              <p className="text-destructive text-xs font-mono text-center">Wrong password</p>
             )}
             <Button
               type="submit"
               disabled={checking || !value.trim()}
-              className="w-full py-3 h-auto rounded-xl bg-accent-blue/15 border border-accent-blue/30 text-accent-blue text-sm font-mono font-medium hover:bg-accent-blue/25"
+              className="w-full py-3 h-auto rounded-xl bg-ring/15 border border-ring/30 text-ring text-sm font-mono font-medium hover:bg-ring/25"
             >
               {checking ? "Checking..." : "Unlock"}
             </Button>
@@ -118,8 +117,8 @@ export default function App() {
 
   if (authState === "checking") {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-bg-primary">
-        <div className="w-2 h-2 rounded-full bg-accent-blue animate-pulse" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="w-2 h-2 rounded-full bg-ring animate-pulse" />
       </div>
     );
   }
@@ -134,13 +133,12 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen bg-bg-primary font-sans">
+      <div className="flex min-h-screen bg-background font-sans">
         <Sidebar />
         <main className="flex-1 min-w-0 overflow-y-auto">
           {activeTab === "dashboard" && <Dashboard />}
           {activeTab === "watchlist" && <Watchlist />}
           {activeTab === "news" && <News />}
-          {activeTab === "journal" && <Journal />}
           {activeTab === "scanner" && <Scanner />}
         </main>
       </div>

@@ -5,37 +5,72 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Backgrounds — dark theme
-        "bg-primary":   "#0C1018",
-        "bg-secondary": "#111827",
-        "bg-tertiary":  "#161E2E",
-
-        // Signals
-        "accent-blue":   "#3B82F6",
-        "accent-green":  "#10B981",
-        "accent-red":    "#F43F5E",
-        "accent-amber":  "#F59E0B",
-        "accent-purple": "#8B5CF6",
-
-        // Text
-        "text-primary":   "#F8FAFC",
-        "text-secondary": "#94A3B8",
-        "text-tertiary":  "#7C8AA0",
-        "text-disabled":  "#475569",
-        "text-muted":     "#7C8AA0",
-      },
-      fontFamily: {
-        display: ['"Roboto"', "sans-serif"],
-        mono:    ['"Roboto Mono"', "monospace"],
-        sans:    ['"Roboto"', "sans-serif"],
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        signal: {
+          "buy-bg":     "hsl(var(--signal-buy-bg))",
+          "buy-border": "hsl(var(--signal-buy-border))",
+          "buy-fg":     "hsl(var(--signal-buy-fg))",
+          "sell-bg":     "hsl(var(--signal-sell-bg))",
+          "sell-border": "hsl(var(--signal-sell-border))",
+          "sell-fg":     "hsl(var(--signal-sell-fg))",
+          "hold-bg":     "hsl(var(--signal-hold-bg))",
+          "hold-border": "hsl(var(--signal-hold-border))",
+          "hold-fg":     "hsl(var(--signal-hold-fg))",
+        },
+        price: {
+          target: "hsl(var(--price-target))",
+          stop:   "hsl(var(--price-stop))",
+        },
+        conf: {
+          track: "hsl(var(--conf-track))",
+          fill:  "hsl(var(--conf-fill))",
+        },
+        status: {
+          open:   "hsl(var(--status-open))",
+          after:  "hsl(var(--status-after))",
+          closed: "hsl(var(--status-closed))",
+        },
       },
       borderRadius: {
-        card: "12px",
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
-      boxShadow: {
-        card: "0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2)",
-        "card-hover": "0 4px 24px rgba(0,0,0,0.5)",
-        glow: "0 0 20px rgba(16,185,129,0.15)",
+      fontFamily: {
+        sans: ["var(--font-geist-sans)", "ui-sans-serif", "system-ui"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular"],
       },
       animation: {
         "fade-in":    "fadeIn 0.3s ease forwards",

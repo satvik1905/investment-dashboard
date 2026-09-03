@@ -13,25 +13,25 @@ interface Props {
 export function AlertBanner({ ticker, reason, urgency, onDismiss }: Props) {
   const config = {
     HIGH: {
-      bg: "bg-accent-red/10",
-      border: "border-accent-red/40",
-      text: "text-accent-red",
+      bg: "bg-destructive/10",
+      border: "border-destructive/40",
+      text: "text-destructive",
       icon: "⚡",
       label: "EXIT NOW",
       pulse: true,
     },
     MEDIUM: {
-      bg: "bg-accent-amber/10",
-      border: "border-accent-amber/40",
-      text: "text-accent-amber",
+      bg: "bg-status-after/10",
+      border: "border-status-after/40",
+      text: "text-status-after",
       icon: "⚠",
       label: "WATCH CLOSELY",
       pulse: false,
     },
     LOW: {
-      bg: "bg-accent-green/10",
-      border: "border-accent-green/30",
-      text: "text-accent-green",
+      bg: "bg-primary/10",
+      border: "border-primary/30",
+      text: "text-primary",
       icon: "✓",
       label: "ON TRACK",
       pulse: false,
@@ -63,14 +63,14 @@ export function AlertBanner({ ticker, reason, urgency, onDismiss }: Props) {
             {config.label}
           </Badge>
         </div>
-        <p className="text-text-secondary text-xs leading-relaxed">{reason}</p>
+        <p className="text-muted-foreground text-xs leading-relaxed">{reason}</p>
       </AlertDescription>
       {onDismiss && (
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onDismiss}
-          className="text-text-tertiary hover:text-text-secondary"
+          className="text-muted-foreground hover:text-muted-foreground"
         >
           ×
         </Button>
