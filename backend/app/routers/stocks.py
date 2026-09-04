@@ -31,7 +31,7 @@ def search_tickers(q: str = Query(..., min_length=1)):
         equities = [
             {"symbol": r["symbol"], "name": r.get("longname") or r.get("shortname", r["symbol"])}
             for r in results
-            if r.get("quoteType") == "EQUITY" and "." not in r["symbol"]
+            if r.get("quoteType") == "EQUITY"
         ]
         return equities[:8]
     except Exception as e:
