@@ -288,8 +288,16 @@ def get_quote(ticker: str) -> dict:
     change     = round(current_price - prev_close, 4) if current_price and prev_close else 0.0
     change_pct = round(change / prev_close * 100, 2)  if prev_close else 0.0
 
+    # ── Company name ─────────────────────────────────────────────────────────
+    company_name: str | None = None
+    try:
+        company_name = stock.info.get("shortName") or stock.info.get("longName")
+    except Exception:
+        pass
+
     result = {
         "ticker":         ticker,
+        "company_name":   company_name,
         "current_price":  round(current_price, 2) if current_price else None,
         "prev_close":     round(prev_close,    2) if prev_close    else None,
         "change":         round(change,        2),

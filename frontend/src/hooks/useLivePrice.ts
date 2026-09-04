@@ -3,6 +3,7 @@ import api from "../api/client";
 
 export interface LiveQuote {
   ticker:        string;
+  company_name?: string | null;
   current_price: number | null;
   prev_close:    number | null;
   change:        number;

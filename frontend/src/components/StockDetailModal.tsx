@@ -9,7 +9,6 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import api from "../api/client";
 import type { Signal } from "../hooks/useSignals";
 import { useLiveQuotes } from "../hooks/useLivePrice";
-import { ConfidenceMeter } from "./ConfidenceMeter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -401,6 +400,9 @@ export function StockDetailModal({ ticker, onClose }: Props) {
           </Button>
           <div className="flex items-baseline gap-2.5">
             <span className="font-mono text-xl font-semibold text-foreground">{ticker}</span>
+            {liveQuote?.company_name && (
+              <span className="text-sm text-muted-foreground truncate max-w-[200px]">{liveQuote.company_name}</span>
+            )}
             {currentPrice != null && (
               <span className="font-mono text-base text-muted-foreground">${currentPrice.toFixed(2)}</span>
             )}
@@ -429,7 +431,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               key={tf}
               value={tf}
               className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                timeframe === tf ? "bg-ring text-white shadow" : "text-muted-foreground hover:text-foreground"
+                timeframe === tf ? "bg-card text-foreground shadow font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tf}
@@ -508,265 +510,216 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         </div>
 
         {/* ── Signal panel ─────────────────────────────────────────────────── */}
-        <div className="w-80 border-l border-black/[0.10] bg-card flex flex-col overflow-y-auto shrink-0">
+        <div className="w-80 border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
           {signalLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
-              <div className="w-6 h-6 border-2 border-ring/30 border-t-ring rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
               <span className="text-muted-foreground text-xs">Updating signal…</span>
             </div>
           ) : signal ? (
-            <div className="p-5 space-y-5">
+            <div className="p-5">
 
               {/* Stale / validation-fail banner */}
               {!signalRefreshed && signalWarnings && (
-                <Alert className="px-3 py-3 rounded-lg border-2 border-destructive/40 bg-destructive/10">
+                <Alert className="px-3 py-3 rounded-lg border-2 border-destructive/40 bg-destructive/10 mb-5">
                   <AlertDescription>
-                    <div className="text-destructive text-xs font-bold uppercase tracking-wider mb-1">Could not refresh</div>
+                    <div className="text-destructive text-xs font-bold mb-1">Could not refresh</div>
                     <p className="text-destructive/80 text-xs leading-relaxed">{signalWarnings.join(" · ")}</p>
                     {signal.generated_at && (
                       <p className="text-muted-foreground text-[10px] mt-1.5">
-                        Showing last known signal from {new Date(signal.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        Showing signal from {new Date(signal.generated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     )}
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* Fresh indicator */}
-              {signalRefreshed && (
-                <div className="text-center text-[10px] text-primary/70 uppercase tracking-wider">Updated just now</div>
-              )}
-
-              {/* Confidence */}
-              <div className="flex flex-col items-center gap-1 pt-2">
-                <ConfidenceMeter confidence={confidence} size={100} />
-                <span className="text-muted-foreground text-xs uppercase tracking-wider mt-1">Confidence</span>
-              </div>
-
-              {/* Price levels */}
-              <div className="grid grid-cols-1 gap-2">
-                {[
-                  {
-                    label: "Entry Zone",
-                    value: signal.entry_zone_low && signal.entry_zone_high
-                      ? `$${parseFloat(signal.entry_zone_low).toFixed(2)} – $${parseFloat(signal.entry_zone_high).toFixed(2)}`
-                      : "—",
-                    color: "text-status-after",
-                  },
-                  { label: "Target",    value: signal.target_price ? `$${parseFloat(signal.target_price).toFixed(2)}` : "—", color: "text-primary" },
-                  { label: "Stop Loss", value: signal.stop_loss    ? `$${parseFloat(signal.stop_loss).toFixed(2)}`    : "—", color: "text-destructive"   },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-muted rounded-lg px-3 py-2.5 flex justify-between items-center">
-                    <span className="text-muted-foreground text-xs uppercase tracking-wider">{label}</span>
-                    <span className={`font-mono text-sm font-semibold ${color}`}>{value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Price direction */}
-              <div>
-                <div className="text-muted-foreground text-xs uppercase tracking-wider mb-2">Price Direction</div>
-                <div className="flex gap-2">
-                  {[
-                    { label: "3D",  dir: signal.price_direction_3d  },
-                    { label: "7D",  dir: signal.price_direction_7d  },
-                    { label: "14D", dir: signal.price_direction_14d },
-                  ].map(({ label, dir }) => (
-                    <div key={label} className="flex-1 bg-muted rounded-lg py-2 flex flex-col items-center gap-0.5">
-                      <span className={`font-mono text-sm font-bold ${dirColor(dir)}`}>{dirArrow(dir)}</span>
-                      <span className="text-muted-foreground text-[10px]">{label}</span>
-                    </div>
-                  ))}
+              {/* 1. Verdict row */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  {badgeVariant && <Badge variant={badgeVariant} className="text-xs font-semibold">{badgeLabel}</Badge>}
+                  <span className="font-mono text-lg font-semibold text-foreground">{ticker}</span>
                 </div>
+                {currentPrice != null && (
+                  <span className="font-mono text-lg tabular-nums text-foreground">${currentPrice.toFixed(2)}</span>
+                )}
               </div>
-
-              {/* Key reason */}
-              {signal.key_reason && (
-                <div>
-                  <div className="text-muted-foreground text-xs uppercase tracking-wider mb-2">Key Signal</div>
-                  <p className="text-muted-foreground text-xs leading-relaxed bg-muted rounded-lg p-3">{signal.key_reason}</p>
-                </div>
-              )}
-
-              {/* RSI value */}
-              {signal.raw_indicators?.rsi_14 != null && (
-                <div className="bg-muted rounded-lg px-3 py-2.5 flex justify-between items-center">
-                  <span className="text-muted-foreground text-xs uppercase tracking-wider">RSI (14)</span>
-                  <span className={`font-mono text-sm font-semibold ${
-                    (signal.raw_indicators.rsi_14 as number) < 30 ? "text-primary" :
-                    (signal.raw_indicators.rsi_14 as number) > 70 ? "text-destructive" : "text-foreground"
-                  }`}>
-                    {(signal.raw_indicators.rsi_14 as number).toFixed(1)}
-                    <span className="text-muted-foreground text-[10px] ml-1">
-                      {(signal.raw_indicators.rsi_14 as number) < 30 ? "OVERSOLD" :
-                       (signal.raw_indicators.rsi_14 as number) > 70 ? "OVERBOUGHT" : "NEUTRAL"}
-                    </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-sm text-muted-foreground truncate mr-2">
+                  {liveQuote?.company_name ?? ticker}
+                </span>
+                {changePct != null && (
+                  <span className="text-sm text-muted-foreground font-mono tabular-nums">
+                    {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
                   </span>
-                </div>
-              )}
-
-              {/* AI Summary */}
-              {signal.summary && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-ring text-xs">◈</span>
-                    <span className="text-muted-foreground text-xs uppercase tracking-wider">Setup Analysis</span>
-                  </div>
-                  <p className="text-muted-foreground text-xs leading-relaxed">{signal.summary}</p>
-                </div>
-              )}
-
-              {/* Claude context read */}
-              <div>
-                {contextState === "idle" && (
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      setContextState("loading");
-                      try {
-                        const res = await api.post(`/api/stocks/${ticker}/context`);
-                        setContextText(res.data.context ?? null);
-                      } catch {
-                        setContextText(null);
-                      }
-                      setContextState("done");
-                    }}
-                    className="w-full border-violet-600/30 bg-violet-600/10 text-violet-600 hover:bg-violet-600/20 text-xs font-semibold"
-                  >
-                    ✦ Get context read
-                  </Button>
                 )}
-                {contextState === "loading" && (
-                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-violet-600/20 bg-violet-600/5">
-                    <div className="w-3.5 h-3.5 border-2 border-violet-600/30 border-t-violet-600 rounded-full animate-spin" />
-                    <span className="text-violet-600/70 text-xs">Analyzing… this takes a few seconds</span>
+              </div>
+
+              {/* 2. Exit levels */}
+              <div className="border-t border-border mt-4 pt-4">
+                <div className="text-sm text-muted-foreground mb-2">Levels</div>
+                {signal.entry_zone_low || signal.target_price || signal.stop_loss ? (
+                  <div className="space-y-1.5">
+                    {signal.entry_zone_low && signal.entry_zone_high && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Entry</span>
+                        <span className="font-mono tabular-nums text-foreground">
+                          ${parseFloat(signal.entry_zone_low).toFixed(2)}–${parseFloat(signal.entry_zone_high).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {signal.target_price && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Target</span>
+                        <span className="font-mono tabular-nums text-price-target">${parseFloat(signal.target_price).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {signal.stop_loss && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Stop</span>
+                        <span className="font-mono tabular-nums text-price-stop">${parseFloat(signal.stop_loss).toFixed(2)}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {contextState === "done" && (
-                  <div className="rounded-lg border border-violet-600/20 bg-violet-600/5 p-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-violet-600 text-xs">✦</span>
-                      <span className="text-violet-600/70 text-xs uppercase tracking-wider font-semibold">AI Context</span>
-                    </div>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
-                      {contextText ?? "Context unavailable right now"}
+                ) : (
+                  <div>
+                    <p className="text-sm text-foreground">No entry, target, or stop defined</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Signal is HOLD — no actionable trade setup at this time.
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Claude chart analysis */}
-              <div>
-                {chartAnalysisState === "idle" && (
+              {/* 3. Confidence */}
+              <div className="border-t border-border mt-4 pt-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground shrink-0">Confidence</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-conf-track">
+                    <div className="h-full rounded-full bg-conf-fill transition-all" style={{ width: `${Math.min(confidence, 100)}%` }} />
+                  </div>
+                  <span className="font-mono text-sm tabular-nums font-semibold text-foreground w-7 text-right">{confidence}</span>
+                </div>
+              </div>
+
+              {/* 4. Why */}
+              <div className="border-t border-border mt-4 pt-4">
+                <div className="text-sm text-muted-foreground mb-2">Why</div>
+                {signal.key_reason && (
+                  <p className="text-sm text-foreground leading-relaxed">{signal.key_reason}</p>
+                )}
+                {signal.raw_indicators?.rsi_14 != null && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    RSI (14) <span className="font-mono tabular-nums font-semibold text-foreground ml-1">{(signal.raw_indicators.rsi_14 as number).toFixed(1)}</span>
+                    <span className="ml-1">
+                      {(signal.raw_indicators.rsi_14 as number) < 30 ? "oversold" :
+                       (signal.raw_indicators.rsi_14 as number) > 70 ? "overbought" : "neutral"}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {/* 5. Direction outlook */}
+              <div className="border-t border-border mt-4 pt-4">
+                <div className="text-sm text-muted-foreground mb-2">Direction outlook</div>
+                <div className="flex items-center gap-4 text-sm">
+                  {[
+                    { label: "3d",  dir: signal.price_direction_3d  },
+                    { label: "7d",  dir: signal.price_direction_7d  },
+                    { label: "14d", dir: signal.price_direction_14d },
+                  ].map(({ label, dir }) => (
+                    <span key={label} className="flex items-center gap-1">
+                      <span className={`font-mono ${dirColor(dir)}`}>{dirArrow(dir)}</span>
+                      <span className="text-muted-foreground">{label}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* 6. Actions */}
+              <div className="border-t border-border mt-4 pt-4 space-y-2">
+                {/* Primary action */}
+                {contextState === "idle" && (
+                  <Button
+                    onClick={async () => {
+                      setContextState("loading");
+                      try {
+                        const res = await api.post(`/api/stocks/${ticker}/context`);
+                        setContextText(res.data.context ?? null);
+                      } catch { setContextText(null); }
+                      setContextState("done");
+                    }}
+                    className="w-full rounded-full"
+                  >
+                    Get context read
+                  </Button>
+                )}
+                {contextState === "loading" && (
+                  <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground text-xs">
+                    <div className="w-3.5 h-3.5 border-2 border-border border-t-foreground rounded-full animate-spin" />
+                    Analyzing…
+                  </div>
+                )}
+                {contextState === "done" && contextText && (
+                  <div className="border border-border rounded-lg p-3 mb-2">
+                    <div className="text-sm text-muted-foreground mb-1">Context</div>
+                    <p className="text-xs text-foreground leading-relaxed">{contextText}</p>
+                  </div>
+                )}
+
+                {/* Secondary actions */}
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
+                    className="flex-1 text-xs"
+                    disabled={chartAnalysisState === "loading"}
                     onClick={async () => {
                       setChartAnalysisState("loading");
                       try {
                         const res = await api.post(`/api/stocks/${ticker}/chart-analysis`);
                         setChartAnalysisText(res.data.analysis ?? null);
-                      } catch {
-                        setChartAnalysisText(null);
-                      }
+                      } catch { setChartAnalysisText(null); }
                       setChartAnalysisState("done");
                     }}
-                    className="w-full border-violet-600/30 bg-violet-600/10 text-violet-600 hover:bg-violet-600/20 text-xs font-semibold"
                   >
-                    ✦ Analyze the charts
+                    {chartAnalysisState === "loading" ? "Analyzing…" : "Analyze charts"}
                   </Button>
-                )}
-                {chartAnalysisState === "loading" && (
-                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-violet-600/20 bg-violet-600/5">
-                    <div className="w-3.5 h-3.5 border-2 border-violet-600/30 border-t-violet-600 rounded-full animate-spin" />
-                    <span className="text-violet-600/70 text-xs">Analyzing charts… this takes a few seconds</span>
-                  </div>
-                )}
-                {chartAnalysisState === "done" && (
-                  <>
-                    <div className="rounded-lg border border-violet-600/20 bg-violet-600/5 p-3">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-violet-600 text-xs">✦</span>
-                        <span className="text-violet-600/70 text-xs uppercase tracking-wider font-semibold">Chart Analysis</span>
-                      </div>
-                      <p className="text-muted-foreground text-xs leading-relaxed">
-                        {chartAnalysisText ?? "Chart analysis unavailable right now"}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => { setChartAnalysisState("idle"); setChartAnalysisText(null); }}
-                      className="w-full mt-1.5 text-[10px] text-muted-foreground hover:text-violet-600"
-                    >
-                      Re-run analysis
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              {/* Claude setup review */}
-              <div>
-                {setupReviewState === "idle" && (
                   <Button
                     variant="outline"
+                    className="flex-1 text-xs"
+                    disabled={setupReviewState === "loading"}
                     onClick={async () => {
                       setSetupReviewState("loading");
                       try {
                         const res = await api.post(`/api/stocks/${ticker}/setup-review`);
                         setSetupReviewText(res.data.review ?? null);
-                      } catch {
-                        setSetupReviewText(null);
-                      }
+                      } catch { setSetupReviewText(null); }
                       setSetupReviewState("done");
                     }}
-                    className="w-full border-violet-600/30 bg-violet-600/10 text-violet-600 hover:bg-violet-600/20 text-xs font-semibold"
                   >
-                    ✦ Get setup review
+                    {setupReviewState === "loading" ? "Reviewing…" : "Setup review"}
                   </Button>
-                )}
-                {setupReviewState === "loading" && (
-                  <div className="flex items-center justify-center gap-2.5 px-3 py-3 rounded-lg border border-violet-600/20 bg-violet-600/5">
-                    <div className="w-3.5 h-3.5 border-2 border-violet-600/30 border-t-violet-600 rounded-full animate-spin" />
-                    <span className="text-violet-600/70 text-xs">Reviewing setup… this takes a few seconds</span>
+                </div>
+
+                {/* Results */}
+                {chartAnalysisState === "done" && chartAnalysisText && (
+                  <div className="border border-border rounded-lg p-3">
+                    <div className="text-sm text-muted-foreground mb-1">Chart analysis</div>
+                    <p className="text-xs text-foreground leading-relaxed">{chartAnalysisText}</p>
                   </div>
                 )}
-                {setupReviewState === "done" && (
-                  <>
-                    <div className="rounded-lg border border-violet-600/20 bg-violet-600/5 p-3">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-violet-600 text-xs">✦</span>
-                        <span className="text-violet-600/70 text-xs uppercase tracking-wider font-semibold">AI Setup Review</span>
-                      </div>
-                      <p className="text-muted-foreground text-xs leading-relaxed">
-                        {setupReviewText ?? "Setup review unavailable right now"}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => { setSetupReviewState("idle"); setSetupReviewText(null); }}
-                      className="w-full mt-1.5 text-[10px] text-muted-foreground hover:text-violet-600"
-                    >
-                      Re-run review
-                    </Button>
-                  </>
+                {setupReviewState === "done" && setupReviewText && (
+                  <div className="border border-border rounded-lg p-3">
+                    <div className="text-sm text-muted-foreground mb-1">Setup review</div>
+                    <p className="text-xs text-foreground leading-relaxed">{setupReviewText}</p>
+                  </div>
                 )}
               </div>
 
-              {/* Risk factors */}
-              {signal.risk_factors && signal.risk_factors.length > 0 && (
-                <div>
-                  <div className="text-muted-foreground text-xs uppercase tracking-wider mb-2">Risk Factors</div>
-                  <div className="space-y-1.5">
-                    {signal.risk_factors.map((r, i) => (
-                      <Alert key={i} className="bg-status-after/5 border-status-after/15 px-2.5 py-2">
-                        <AlertDescription className="flex gap-2 text-xs text-status-after/80">
-                          <span className="shrink-0">⚠</span>
-                          <span className="leading-relaxed">{r}</span>
-                        </AlertDescription>
-                      </Alert>
-                    ))}
-                  </div>
+              {/* 7. Updated timestamp */}
+              {signalRefreshed && (
+                <div className="border-t border-border mt-4 pt-3 text-right">
+                  <span className="text-xs text-muted-foreground">Updated just now</span>
                 </div>
               )}
 

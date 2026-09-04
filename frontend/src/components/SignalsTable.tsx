@@ -183,7 +183,6 @@ function SignalRow({
   const target = parseNum(signal.target_price);
   const stop = parseNum(signal.stop_loss);
 
-  const hold = !isActionable(signal.signal);
   const badgeVariant = SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold";
   const badgeLabel = SIGNAL_LABEL[signal.signal] ?? "HOLD";
 
@@ -207,7 +206,7 @@ function SignalRow({
     <>
       <TableRow
         onClick={() => onRowClick(signal)}
-        className={cn("cursor-pointer hover:bg-accent", hold && "opacity-55")}
+        className="cursor-pointer hover:bg-accent"
       >
         {/* Ticker */}
         <TableCell className="py-2.5 px-3 font-mono text-sm font-semibold text-foreground whitespace-nowrap">
@@ -272,10 +271,10 @@ function SignalRow({
               onClick={handleRefresh}
               disabled={refreshing}
               title="Refresh signal"
-              className="text-muted-foreground hover:text-foreground h-7 w-7"
+              className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 h-7 w-7"
             >
               {refreshing ? (
-                <span className="w-4 h-4 border-2 border-border border-t-foreground rounded-full animate-spin block" />
+                <span className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin block" />
               ) : (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5a5.5 5.5 0 0 1 4.3 2.1M13.5 2.5v3h-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -287,7 +286,7 @@ function SignalRow({
               size="icon-xs"
               onClick={handleDeleteClick}
               title="Remove from watchlist"
-              className="text-muted-foreground hover:text-destructive h-7 w-7"
+              className="text-red-400 hover:text-destructive hover:bg-red-50 h-7 w-7"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M3 4h10M6.5 4V2.5h3V4M4 4l.7 9.5h6.6L12 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>

@@ -255,8 +255,8 @@ function EmptyState() {
       <p className="text-sm font-sans font-medium text-muted-foreground">
         Add stocks to your signals or positions to see news
       </p>
-      <Button variant="outline" onClick={() => setActiveTab("watchlist")}>
-        Go to Watchlist →
+      <Button variant="outline" onClick={() => setActiveTab("dashboard")}>
+        Go to Dashboard →
       </Button>
     </div>
   );

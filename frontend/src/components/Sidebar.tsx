@@ -26,15 +26,6 @@ const NAV_ITEMS = [
     ),
   },
   {
-    id: "watchlist",
-    label: "Watchlist",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1.5l1.6 4.9H15l-4.1 3 1.6 4.9L8 11.3l-4.5 3.1 1.6-4.9L1 6.4h5.4L8 1.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
     id: "scanner",
     label: "Scanner",
     icon: (

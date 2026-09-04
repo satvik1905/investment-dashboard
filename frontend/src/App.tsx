@@ -3,7 +3,6 @@ import { useAppStore } from "./store/appStore";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./pages/Dashboard";
 import { Scanner } from "./pages/Scanner";
-import { Watchlist } from "./pages/Watchlist";
 import { News } from "./pages/News";
 import api, { setAuthKey, clearAuthKey } from "./api/client";
 import {
@@ -137,7 +136,6 @@ export default function App() {
         <Sidebar />
         <main className="flex-1 min-w-0 overflow-y-auto">
           {activeTab === "dashboard" && <Dashboard />}
-          {activeTab === "watchlist" && <Watchlist />}
           {activeTab === "news" && <News />}
           {activeTab === "scanner" && <Scanner />}
         </main>
