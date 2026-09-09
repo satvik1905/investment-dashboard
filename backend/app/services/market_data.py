@@ -81,8 +81,11 @@ def validate_ticker(ticker: str) -> TickerStatus:
     except Exception:
         pass
 
-    if not info or info.get("trailingPegRatio") is None and info.get("shortName") is None:
-        # Truly empty info — ticker is likely invalid
+    # Truly empty info — ticker is likely invalid.
+    # Check for fields that every real ticker has (symbol, shortName, regularMarketPrice).
+    # trailingPegRatio is unreliable — many valid tickers lack it.
+    has_basic_info = info.get("shortName") or info.get("symbol") or info.get("regularMarketPrice")
+    if not info or not has_basic_info:
         is_valid = False
         warnings.append("Ticker info unavailable — may be delisted.")
         result = TickerStatus(
@@ -94,7 +97,8 @@ def validate_ticker(ticker: str) -> TickerStatus:
             last_history_close=None,
             info_previous_close=None,
         )
-        _cache_validation(r, cache_key, result)
+        # Use a short TTL for failures — could be a transient yfinance issue
+        _cache_validation(r, cache_key, result, ttl=300)
         return result
 
     info_short_name = info.get("shortName")
@@ -182,7 +186,7 @@ def validate_ticker(ticker: str) -> TickerStatus:
     return result
 
 
-def _cache_validation(r, cache_key: str, status: TickerStatus) -> None:
+def _cache_validation(r, cache_key: str, status: TickerStatus, ttl: int = VALIDATION_CACHE_TTL) -> None:
     if not r:
         return
     try:
@@ -190,7 +194,7 @@ def _cache_validation(r, cache_key: str, status: TickerStatus) -> None:
         # date is not JSON-serializable
         lcd = d.get("last_candle_date")
         d["last_candle_date"] = lcd.isoformat() if lcd else None
-        r.setex(cache_key, VALIDATION_CACHE_TTL, json.dumps(d))
+        r.setex(cache_key, ttl, json.dumps(d))
     except Exception:
         pass
 
