@@ -1,5 +1,5 @@
 import axios from "axios";
-import { supabase } from "../lib/supabase";
+import { supabase, supabaseEnabled } from "../lib/supabase";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:8000",
@@ -7,21 +7,23 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Attach Supabase JWT on every outgoing request
-api.interceptors.request.use(async (config) => {
-  const { data } = await supabase.auth.getSession();
-  if (data.session?.access_token) {
-    config.headers.Authorization = `Bearer ${data.session.access_token}`;
-  }
-  return config;
-});
+// Attach Supabase JWT on every outgoing request (only when configured)
+if (supabaseEnabled) {
+  api.interceptors.request.use(async (config) => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      config.headers.Authorization = `Bearer ${data.session.access_token}`;
+    }
+    return config;
+  });
+}
 
 // Response interceptor — sign out on 401 so the UI shows the login screen
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
     if (!axios.isCancel(err)) {
-      if (err?.response?.status === 401) {
+      if (err?.response?.status === 401 && supabaseEnabled) {
         await supabase.auth.signOut();
       }
       console.error(

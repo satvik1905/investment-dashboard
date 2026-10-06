@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
+import { supabase, supabaseEnabled } from "../lib/supabase";
+
+// Sentinel session used when Supabase is not configured (local dev)
+const BYPASS_SESSION = { access_token: "", user: {} } as unknown as Session;
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(
+    supabaseEnabled ? null : BYPASS_SESSION,
+  );
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(supabaseEnabled);
 
   useEffect(() => {
+    if (!supabaseEnabled) return;
+
     // Check for existing session on mount
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
