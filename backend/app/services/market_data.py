@@ -81,25 +81,47 @@ def validate_ticker(ticker: str) -> TickerStatus:
     except Exception:
         pass
 
-    # Truly empty info — ticker is likely invalid.
     # Check for fields that every real ticker has (symbol, shortName, regularMarketPrice).
     # trailingPegRatio is unreliable — many valid tickers lack it.
     has_basic_info = info.get("shortName") or info.get("symbol") or info.get("regularMarketPrice")
     if not info or not has_basic_info:
-        is_valid = False
-        warnings.append("Ticker info unavailable — may be delisted.")
-        result = TickerStatus(
-            is_valid=is_valid,
-            is_suspicious=True,
-            warnings=warnings,
-            info_short_name=None,
-            last_candle_date=None,
-            last_history_close=None,
-            info_previous_close=None,
-        )
-        # Use a short TTL for failures — could be a transient yfinance issue
-        _cache_validation(r, cache_key, result, ttl=300)
-        return result
+        # yfinance .info is flaky — it can return {} for valid tickers like AAPL.
+        # Before marking as delisted, try fast_info and history as fallbacks.
+        fallback_ok = False
+        try:
+            fi = yf.Ticker(ticker).fast_info
+            if fi and fi.last_price:
+                fallback_ok = True
+                info_short_name = None
+                info_previous_close = float(fi.previous_close) if fi.previous_close else None
+        except Exception:
+            pass
+
+        if not fallback_ok:
+            try:
+                fb_hist = yf.download(ticker, period="5d", interval="1d", progress=False, auto_adjust=True)
+                if isinstance(fb_hist.columns, pd.MultiIndex):
+                    fb_hist.columns = [col[0] for col in fb_hist.columns]
+                if not fb_hist.empty and len(fb_hist) >= 1:
+                    fallback_ok = True
+            except Exception:
+                pass
+
+        if not fallback_ok:
+            is_valid = False
+            warnings.append("Ticker info unavailable — may be delisted.")
+            result = TickerStatus(
+                is_valid=is_valid,
+                is_suspicious=True,
+                warnings=warnings,
+                info_short_name=None,
+                last_candle_date=None,
+                last_history_close=None,
+                info_previous_close=None,
+            )
+            # Use a short TTL for failures — could be a transient yfinance issue
+            _cache_validation(r, cache_key, result, ttl=300)
+            return result
 
     info_short_name = info.get("shortName")
     info_previous_close = info.get("previousClose")

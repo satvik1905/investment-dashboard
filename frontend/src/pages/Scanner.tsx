@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import { useAppStore } from "../store/appStore";
 import { StockDetailModal } from "../components/StockDetailModal";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -18,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -553,38 +551,37 @@ export function Scanner() {
       {(hasResults || isLoading) && !isScanning && (
         <>
           {/* Tabs */}
-          <Tabs value={activeCandle} onValueChange={setActiveCandle} className="mb-4">
-            <div className="flex items-center gap-1 flex-wrap">
-              <TabsList variant="line" className="h-auto flex-wrap">
-                <TabsTrigger value="RED" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
-                  <span className="w-2 h-2 rounded-full bg-primary inline-block" />
-                  Weekly Red
-                  <Badge variant="outline" className="text-xs">{redResults.length}</Badge>
-                </TabsTrigger>
-
-                <TabsTrigger value="YELLOW" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
-                  <span className="w-2 h-2 rounded-full bg-status-after inline-block" />
-                  Weekly Yellow
-                  <Badge variant="outline" className="text-xs">{yellowResults.length}</Badge>
-                </TabsTrigger>
-
-                <Separator orientation="vertical" className="h-5 mx-1" />
-
-                <TabsTrigger value="MONTHLY_RED" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
-                  <span className="text-[11px]">📅</span>
-                  Monthly Red
-                  <Badge variant="outline" className="text-xs">{monthlyRedResults.length}</Badge>
-                  <MonthlyTooltipInfo />
-                </TabsTrigger>
-
-                <TabsTrigger value="MONTHLY_YELLOW" className="flex items-center gap-2 px-4 py-2 text-sm font-mono font-medium">
-                  <span className="text-[11px]">📅</span>
-                  Monthly Yellow
-                  <Badge variant="outline" className="text-xs">{monthlyYellowResults.length}</Badge>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-          </Tabs>
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            {([
+              { key: "RED", label: "Weekly Red", count: redResults.length, dot: "bg-primary", icon: null },
+              { key: "YELLOW", label: "Weekly Yellow", count: yellowResults.length, dot: "bg-status-after", icon: null },
+              { key: "MONTHLY_RED", label: "Monthly Red", count: monthlyRedResults.length, dot: null, icon: "📅", tooltip: true },
+              { key: "MONTHLY_YELLOW", label: "Monthly Yellow", count: monthlyYellowResults.length, dot: null, icon: "📅", tooltip: false },
+            ] as const).map((tab) => {
+              const isActive = activeCandle === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveCandle(tab.key)}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-mono font-medium border transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
+                      : "bg-card text-muted-foreground border-black/[0.12] hover:border-primary/20 hover:text-foreground hover:bg-primary/[0.04]"
+                  }`}
+                >
+                  {tab.dot && <span className={`w-2 h-2 rounded-full ${tab.dot} inline-block`} />}
+                  {tab.icon && <span className="text-[11px]">{tab.icon}</span>}
+                  {tab.label}
+                  <span className={`text-xs font-mono rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center ${
+                    isActive ? "bg-primary/15 text-primary" : "bg-black/[0.06] text-muted-foreground"
+                  }`}>
+                    {tab.count}
+                  </span>
+                  {tab.tooltip && <MonthlyTooltipInfo />}
+                </button>
+              );
+            })}
+          </div>
 
           {/* Legend */}
           <div className="mb-4 p-3 rounded-lg bg-card border border-black/[0.08] text-xs text-muted-foreground font-mono leading-relaxed">
