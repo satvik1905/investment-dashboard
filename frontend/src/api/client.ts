@@ -1,4 +1,5 @@
 import axios from "axios";
+import { supabase } from "../lib/supabase";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:8000",
@@ -6,40 +7,28 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// ── Auth key (in-memory only — cleared on page refresh) ──────────────────────
-
-let _authKey: string | null = null;
-
-export function setAuthKey(key: string) {
-  _authKey = key;
-}
-
-export function clearAuthKey() {
-  _authKey = null;
-}
-
-// Attach X-SwingIQ-Key on every outgoing request when set
-api.interceptors.request.use((config) => {
-  if (_authKey) {
-    config.headers["X-SwingIQ-Key"] = _authKey;
+// Attach Supabase JWT on every outgoing request
+api.interceptors.request.use(async (config) => {
+  const { data } = await supabase.auth.getSession();
+  if (data.session?.access_token) {
+    config.headers.Authorization = `Bearer ${data.session.access_token}`;
   }
   return config;
 });
 
-// Response interceptor — broadcast 401 so the UI can show the gate
+// Response interceptor — sign out on 401 so the UI shows the login screen
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
+  async (err) => {
     if (!axios.isCancel(err)) {
       if (err?.response?.status === 401) {
-        clearAuthKey();
-        window.dispatchEvent(new Event("swingiq:auth-required"));
+        await supabase.auth.signOut();
       }
       console.error(
         "[API]",
         err?.config?.method?.toUpperCase(),
         err?.config?.url,
-        "→",
+        "\u2192",
         err?.response?.status ?? "network error",
         err?.response?.data?.detail ?? err.message,
       );

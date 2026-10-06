@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useAppStore } from "./store/appStore";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./pages/Dashboard";
 import { Scanner } from "./pages/Scanner";
 import { News } from "./pages/News";
-import api, { setAuthKey, clearAuthKey } from "./api/client";
+import { useAuth } from "./hooks/useAuth";
 import {
   Card,
   CardHeader,
@@ -16,33 +16,28 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// ── Password gate ────────────────────────────────────────────────────────────
+// ── Login page ──────────────────────────────────────────────────────────────
 
-function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
-  const [value, setValue] = useState("");
-  const [error, setError] = useState(false);
-  const [checking, setChecking] = useState(false);
+function LoginPage() {
+  const { signIn } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!value.trim()) return;
-    setError(false);
-    setChecking(true);
-    setAuthKey(value.trim());
+    if (!email.trim() || !password.trim()) return;
+    setError("");
+    setSubmitting(true);
     try {
-      await api.get("/api/signals/latest");
-      onUnlock();
+      await signIn(email.trim(), password.trim());
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 401) {
-        clearAuthKey();
-        setError(true);
-      } else {
-        // Non-auth error (network, 500, etc.) — key may be fine, let them in
-        onUnlock();
-      }
+      const message =
+        err instanceof Error ? err.message : "Sign in failed";
+      setError(message);
     } finally {
-      setChecking(false);
+      setSubmitting(false);
     }
   };
 
@@ -54,30 +49,48 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
             SwingIQ
           </CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-1">
-            Enter password to continue
+            Sign in to continue
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              type="email"
+              autoFocus
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+              }}
+              placeholder="Email"
+              className="bg-card text-foreground font-mono text-sm px-4 py-3 h-auto rounded-xl placeholder:text-muted-foreground"
+            />
             <Input
               type="password"
-              autoFocus
-              value={value}
-              onChange={(e) => { setValue(e.target.value); setError(false); }}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
               placeholder="Password"
               className="bg-card text-foreground font-mono text-sm px-4 py-3 h-auto rounded-xl placeholder:text-muted-foreground"
             />
             {error && (
-              <p className="text-destructive text-xs font-mono text-center">Wrong password</p>
+              <p className="text-destructive text-xs font-mono text-center">
+                {error}
+              </p>
             )}
             <Button
               type="submit"
-              disabled={checking || !value.trim()}
+              disabled={submitting || !email.trim() || !password.trim()}
               className="w-full py-3 h-auto rounded-xl bg-ring/15 border border-ring/30 text-ring text-sm font-mono font-medium hover:bg-ring/25"
             >
-              {checking ? "Checking..." : "Unlock"}
+              {submitting ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+          <p className="text-muted-foreground text-xs text-center mt-4">
+            Access is invite-only
+          </p>
         </CardContent>
       </Card>
     </div>
@@ -88,33 +101,9 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 
 export default function App() {
   const { activeTab } = useAppStore();
-  const [authState, setAuthState] = useState<"checking" | "locked" | "open">("checking");
+  const { session, loading } = useAuth();
 
-  const handleAuthRequired = useCallback(() => setAuthState("locked"), []);
-
-  useEffect(() => {
-    window.addEventListener("swingiq:auth-required", handleAuthRequired);
-    return () => window.removeEventListener("swingiq:auth-required", handleAuthRequired);
-  }, [handleAuthRequired]);
-
-  // Probe on mount: is the gate on?
-  useEffect(() => {
-    let cancelled = false;
-    api.get("/api/signals/latest").then(() => {
-      if (!cancelled) setAuthState("open");
-    }).catch((err) => {
-      if (cancelled) return;
-      if (err?.response?.status === 401) {
-        setAuthState("locked");
-      } else {
-        // Gate is off or backend is down — show the app either way
-        setAuthState("open");
-      }
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  if (authState === "checking") {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="w-2 h-2 rounded-full bg-ring animate-pulse" />
@@ -122,10 +111,10 @@ export default function App() {
     );
   }
 
-  if (authState === "locked") {
+  if (!session) {
     return (
       <TooltipProvider>
-        <PasswordGate onUnlock={() => setAuthState("open")} />
+        <LoginPage />
       </TooltipProvider>
     );
   }

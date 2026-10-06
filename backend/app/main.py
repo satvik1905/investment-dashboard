@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from .auth import require_auth
 from .database import engine, Base
+from .routers import auth as auth_router
 from .routers import signals, stocks, positions, journal, dashboard, scanner, news
 
 load_dotenv()
@@ -19,13 +20,14 @@ app = FastAPI(
     dependencies=[Depends(require_auth)],
 )
 
-_allowed_origins = list({
-    os.getenv("FRONTEND_URL", "http://localhost:5173"),
+_frontend_url = os.getenv("FRONTEND_URL", "")
+_allowed_origins = list(filter(None, {
+    _frontend_url if _frontend_url else None,
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",
     "http://localhost:5176",
-})
+}))
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +37,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-SwingIQ-Key"],
 )
 
+app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
 app.include_router(signals.router, prefix="/api/signals", tags=["signals"])
 app.include_router(stocks.router, prefix="/api/stocks", tags=["stocks"])
 app.include_router(positions.router, prefix="/api/positions", tags=["positions"])
