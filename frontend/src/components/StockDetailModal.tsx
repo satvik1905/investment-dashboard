@@ -109,6 +109,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
   const [chartAnalysisText, setChartAnalysisText] = useState<string | null>(null);
   const [setupReviewState, setSetupReviewState] = useState<"idle" | "loading" | "done">("idle");
   const [setupReviewText, setSetupReviewText] = useState<string | null>(null);
+  const [onboardingStep, setOnboardingStep] = useState(() => localStorage.getItem("chart-onboarding-seen") ? 0 : 1);
+  const smaLegendRef = useRef<HTMLDivElement>(null);
 
   // ── Signal refresh on mount ─────────────────────────────────────────────
   const queryClient = useQueryClient();
@@ -439,14 +441,20 @@ export function StockDetailModal({ ticker, onClose }: Props) {
           ))}
         </ToggleGroup>
 
-        {/* Right: SMA legend */}
-        <div className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground">
+        {/* Right: SMA legend + chart guide button */}
+        <div ref={smaLegendRef} className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground">
           {smaLabels.map((label, i) => (
             <span key={label} className="flex items-center gap-1.5">
               <span className="inline-block w-5 h-0.5 rounded" style={{ backgroundColor: SMA_COLORS[i] }} />
               {label}
             </span>
           ))}
+          <button
+            onClick={() => setOnboardingStep(1)}
+            className="w-5 h-5 rounded-full border border-black/[0.15] text-muted-foreground hover:text-foreground hover:border-black/[0.3] flex items-center justify-center text-[10px] font-semibold transition-colors cursor-pointer"
+          >
+            ?
+          </button>
         </div>
       </div>
 
@@ -475,6 +483,205 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               </div>
             </div>
           )}
+
+          {/* Step-by-step chart onboarding */}
+          {onboardingStep > 0 && (() => {
+            const TOTAL_STEPS = 5;
+            const dismiss = () => { setOnboardingStep(0); localStorage.setItem("chart-onboarding-seen", "true"); };
+            const next = () => onboardingStep < TOTAL_STEPS ? setOnboardingStep(onboardingStep + 1) : dismiss();
+            const back = () => onboardingStep > 1 && setOnboardingStep(onboardingStep - 1);
+
+            // Map steps to refs for spotlight
+            const spotlightRef =
+              onboardingStep <= 2 ? mainRef :
+              onboardingStep === 3 ? smaLegendRef :
+              onboardingStep === 4 ? volRef : rsiRef;
+
+            const stepContent: Record<number, { title: string; body: React.ReactNode }> = {
+              1: {
+                title: "Candle Colors",
+                body: (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      {([
+                        { color: "#1565C0", label: "Blue", desc: "Uptrend continuation" },
+                        { color: "#00FFFF", label: "Cyan", desc: "Downtrend continuation", border: true },
+                        { color: "#FF4444", label: "Red", desc: "Bullish reversal — BUY signal" },
+                        { color: "#FFD700", label: "Yellow", desc: "Bearish reversal — SELL signal", border: true },
+                      ] as const).map((c) => (
+                        <div key={c.label} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
+                          <span className={`w-3 h-3 rounded-sm shrink-0 mt-0.5 ${c.border ? "border border-black/[0.10]" : ""}`} style={{ backgroundColor: c.color }} />
+                          <div>
+                            <div className="text-xs font-semibold text-foreground">{c.label}</div>
+                            <div className="text-[10px] text-muted-foreground leading-snug">{c.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">Red and Yellow candles appear exactly once at trend reversals — they are the trading signals.</p>
+                  </>
+                ),
+              },
+              2: {
+                title: "Price Levels",
+                body: (
+                  <div className="space-y-2">
+                    {([
+                      { color: "#22c55e", style: "dashed", label: "Support / Target", desc: "Price floor & profit-taking level" },
+                      { color: "#ef4444", style: "dashed", label: "Resistance / Stop", desc: "Price ceiling & risk limit" },
+                      { color: "#f59e0b", style: "dotted", label: "Entry Zone", desc: "Range to enter the trade" },
+                    ] as const).map((l) => (
+                      <div key={l.label} className="flex items-center gap-2.5">
+                        <span className="w-6 shrink-0" style={{ borderBottom: `2px ${l.style} ${l.color}` }} />
+                        <span className="text-xs text-foreground font-medium">{l.label}</span>
+                        <span className="text-[10px] text-muted-foreground">— {l.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                ),
+              },
+              3: {
+                title: "Moving Averages",
+                body: (
+                  <div className="space-y-2">
+                    {([
+                      { color: "#3b82f6", label: "SMA 20", desc: "Short-term trend" },
+                      { color: "#f97316", label: "SMA 50", desc: "Medium-term trend" },
+                      { color: "#e2e8f0", label: "SMA 200", desc: "Long-term trend", border: true },
+                    ] as const).map((s) => (
+                      <div key={s.label} className="flex items-center gap-2.5">
+                        <span className={`w-6 h-0.5 rounded shrink-0 ${s.border ? "border border-black/[0.06]" : ""}`} style={{ backgroundColor: s.color }} />
+                        <span className="text-xs text-foreground font-medium font-mono">{s.label}</span>
+                        <span className="text-[10px] text-muted-foreground">— {s.desc}</span>
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">Price above all three = strong uptrend.</p>
+                  </div>
+                ),
+              },
+              4: {
+                title: "Volume",
+                body: (
+                  <div className="flex items-start gap-2.5">
+                    <div className="flex gap-0.5 shrink-0 mt-0.5">
+                      <span className="w-2.5 h-4 rounded-sm bg-[#4ade80]" />
+                      <span className="w-2.5 h-3 rounded-sm bg-[rgba(34,197,94,0.4)]" />
+                      <span className="w-2.5 h-4 rounded-sm bg-[#f87171]" />
+                      <span className="w-2.5 h-3 rounded-sm bg-[rgba(239,68,68,0.4)]" />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">Green = up day, Red = down day. Bright bars = unusually high volume (2x+ avg), confirming the move.</p>
+                  </div>
+                ),
+              },
+              5: {
+                title: "RSI (Relative Strength Index)",
+                body: (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-6 h-0.5 rounded shrink-0" style={{ backgroundColor: "#8b5cf6" }} />
+                      <span className="text-[11px] text-muted-foreground">Purple line oscillating 0–100</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Above <span className="text-destructive font-semibold">70</span> = overbought (may pull back). Below <span className="text-primary font-semibold">30</span> = oversold (may bounce).
+                    </p>
+                  </div>
+                ),
+              },
+            };
+
+            const { title, body } = stepContent[onboardingStep];
+
+            // Compute spotlight and tooltip positions
+            const containerRect = chartsRef.current?.getBoundingClientRect();
+            const targetRect = spotlightRef.current?.getBoundingClientRect();
+            let spotlightStyle: React.CSSProperties | null = null;
+            let tooltipStyle: React.CSSProperties = { top: 24 };
+
+            if (containerRect && targetRect) {
+              const top = targetRect.top - containerRect.top;
+              const left = targetRect.left - containerRect.left;
+              const containerH = containerRect.height;
+              const targetMid = top + targetRect.height / 2;
+              const isLowerHalf = targetMid > containerH / 2;
+
+              spotlightStyle = {
+                top: top - 2,
+                left: left - 2,
+                width: targetRect.width + 4,
+                height: targetRect.height + 4,
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.45)",
+              };
+              tooltipStyle = isLowerHalf
+                ? { bottom: containerH - top + 12 }
+                : { top: top + targetRect.height + 12 };
+            }
+
+            return (
+              <div className="absolute inset-0 z-30" onClick={dismiss}>
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-black/40 transition-opacity" />
+
+                {/* Spotlight cutout */}
+                {spotlightStyle && (
+                  <div
+                    className="absolute rounded-lg ring-2 ring-primary/50 bg-white/[0.03]"
+                    style={spotlightStyle}
+                  />
+                )}
+
+                {/* Tooltip card — positioned above or below the target */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 w-[340px] bg-card border border-black/[0.10] rounded-xl shadow-2xl p-4 z-10"
+                  style={tooltipStyle}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-primary/10 text-primary text-[10px] font-bold font-mono rounded-full px-2 py-0.5">
+                        {onboardingStep}/{TOTAL_STEPS}
+                      </span>
+                      <h4 className="text-sm font-bold text-foreground">{title}</h4>
+                    </div>
+                    <button onClick={dismiss} className="text-muted-foreground hover:text-foreground text-xs cursor-pointer">✕</button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="mb-4">{body}</div>
+
+                  {/* Step dots + controls */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-1.5">
+                      {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                        <span
+                          key={i}
+                          className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                            i + 1 === onboardingStep ? "bg-primary" : i + 1 < onboardingStep ? "bg-primary/40" : "bg-black/[0.12]"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {onboardingStep > 1 && (
+                        <button onClick={back} className="text-muted-foreground hover:text-foreground text-xs font-medium cursor-pointer">
+                          Back
+                        </button>
+                      )}
+                      <button onClick={dismiss} className="text-muted-foreground hover:text-foreground text-xs cursor-pointer">
+                        Skip
+                      </button>
+                      <button
+                        onClick={next}
+                        className="bg-primary/10 text-primary text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                      >
+                        {onboardingStep === TOTAL_STEPS ? "Done" : "Next"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {!data?.candles?.length && !isFetching ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -596,9 +803,16 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground shrink-0">Confidence</span>
                   <div className="flex-1 h-1.5 rounded-full bg-conf-track">
-                    <div className="h-full rounded-full bg-conf-fill transition-all" style={{ width: `${Math.min(confidence, 100)}%` }} />
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        confidence <= 25 ? "bg-destructive" : confidence <= 75 ? "bg-status-after" : "bg-primary"
+                      }`}
+                      style={{ width: `${Math.min(confidence, 100)}%` }}
+                    />
                   </div>
-                  <span className="font-mono text-sm tabular-nums font-semibold text-foreground w-7 text-right">{confidence}</span>
+                  <span className={`font-mono text-sm tabular-nums font-semibold w-7 text-right ${
+                    confidence <= 25 ? "text-destructive" : confidence <= 75 ? "text-status-after" : "text-primary"
+                  }`}>{confidence}</span>
                 </div>
               </div>
 
