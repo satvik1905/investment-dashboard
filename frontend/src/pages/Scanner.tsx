@@ -116,7 +116,7 @@ function PriorTrendBar({
   );
 }
 
-function RsiBadge({ rsi, candle_type }: { rsi: number | null; candle_type: "RED" | "YELLOW" }) {
+function RsiBadge({ rsi, candle_type }: { rsi: number | null; candle_type: "RED" | "YELLOW" | "NONE" }) {
   if (rsi == null) return <span className="text-muted-foreground font-mono text-sm">—</span>;
 
   const isOversold = candle_type === "RED" && rsi < 35;
@@ -189,7 +189,7 @@ function ResultRow({
             {row.ticker}
           </span>
           {isMultiTimeframe && (
-            <Badge variant="warning" className="text-[9px] font-mono font-semibold tracking-wide bg-yellow-500/20 border-yellow-500/40 text-yellow-400">
+            <Badge variant="hold" className="text-[9px] font-mono font-semibold tracking-wide bg-yellow-500/20 border-yellow-500/40 text-yellow-400">
               ⭐ Multi-TF
             </Badge>
           )}
@@ -489,7 +489,7 @@ export function Scanner() {
               </span>
             )}
             {!isWeeklyCandleClosed && (
-              <Badge variant="warning" className="text-xs">
+              <Badge variant="hold" className="text-xs">
                 ⚠ Weekly candle still forming — results may be preliminary
               </Badge>
             )}
@@ -553,8 +553,8 @@ export function Scanner() {
           {/* Tabs */}
           <div className="flex items-center gap-2 mb-4 flex-wrap">
             {([
-              { key: "RED", label: "Weekly Red", count: redResults.length, dot: "bg-primary", icon: null },
-              { key: "YELLOW", label: "Weekly Yellow", count: yellowResults.length, dot: "bg-status-after", icon: null },
+              { key: "RED", label: "Weekly Red", count: redResults.length, dot: "bg-primary", icon: null, tooltip: false },
+              { key: "YELLOW", label: "Weekly Yellow", count: yellowResults.length, dot: "bg-status-after", icon: null, tooltip: false },
               { key: "MONTHLY_RED", label: "Monthly Red", count: monthlyRedResults.length, dot: null, icon: "📅", tooltip: true },
               { key: "MONTHLY_YELLOW", label: "Monthly Yellow", count: monthlyYellowResults.length, dot: null, icon: "📅", tooltip: false },
             ] as const).map((tab) => {

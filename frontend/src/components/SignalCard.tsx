@@ -36,21 +36,6 @@ const SIGNAL_CFG = {
 
 type SignalColor = "green" | "amber" | "red";
 
-const COLOR_CLASSES: Record<SignalColor, { badge: "buy" | "strongBuy" | "sell" | "strongSell" | "hold"; ring: string }> = {
-  green: {
-    badge: "buy",
-    ring:  "border-primary/20",
-  },
-  amber: {
-    badge: "hold",
-    ring:  "border-status-after/20",
-  },
-  red: {
-    badge: "sell",
-    ring:  "border-destructive/20",
-  },
-};
-
 const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
   STRONG_BUY: "strongBuy",
   BUY: "buy",
@@ -163,8 +148,6 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
   const baseCfg = SIGNAL_CFG[signal.signal] ?? SIGNAL_CFG.HOLD;
   const sigColor: SignalColor = stopHit ? "red" : targetHit ? "green" : baseCfg.color as SignalColor;
   const sigLabel = stopHit ? "STOP HIT" : targetHit ? "TARGET HIT" : baseCfg.label;
-  const colorCls = COLOR_CLASSES[sigColor];
-
   // Badge variant
   const badgeVariant = stopHit ? "sell" as const : targetHit ? "strongBuy" as const : SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold" as const;
 
@@ -288,7 +271,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
         </div>
 
         {/* Data quality warning */}
-        {signal.raw_indicators?.data_warning && (
+        {!!signal.raw_indicators?.data_warning && (
           <Alert
             className="mb-3 px-3 py-2 rounded-lg text-[11px] leading-relaxed bg-status-after/10 border-status-after/25 text-status-after"
             title={(signal.raw_indicators.data_warning as string[]).join("\n")}

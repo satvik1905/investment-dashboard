@@ -504,9 +504,9 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                   <>
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       {([
-                        { color: "#1565C0", label: "Blue", desc: "Uptrend continuation" },
+                        { color: "#1565C0", label: "Blue", desc: "Uptrend continuation", border: false },
                         { color: "#00FFFF", label: "Cyan", desc: "Downtrend continuation", border: true },
-                        { color: "#FF4444", label: "Red", desc: "Bullish reversal — BUY signal" },
+                        { color: "#FF4444", label: "Red", desc: "Bullish reversal — BUY signal", border: false },
                         { color: "#FFD700", label: "Yellow", desc: "Bearish reversal — SELL signal", border: true },
                       ] as const).map((c) => (
                         <div key={c.label} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
@@ -545,8 +545,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 body: (
                   <div className="space-y-2">
                     {([
-                      { color: "#3b82f6", label: "SMA 20", desc: "Short-term trend" },
-                      { color: "#f97316", label: "SMA 50", desc: "Medium-term trend" },
+                      { color: "#3b82f6", label: "SMA 20", desc: "Short-term trend", border: false },
+                      { color: "#f97316", label: "SMA 50", desc: "Medium-term trend", border: false },
                       { color: "#e2e8f0", label: "SMA 200", desc: "Long-term trend", border: true },
                     ] as const).map((s) => (
                       <div key={s.label} className="flex items-center gap-2.5">

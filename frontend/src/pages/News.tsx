@@ -33,7 +33,7 @@ const sectionAnim = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.3, ease: "easeOut" },
+    transition: { delay: i * 0.1, duration: 0.3, ease: "easeOut" as const },
   }),
 };
 
@@ -105,13 +105,13 @@ function VixCard() {
 
   // State pill
   let pillLabel: string;
-  let pillVariant: "buy" | "warning" | "sell";
+  let pillVariant: "buy" | "hold" | "sell";
   if (current < 15) {
     pillLabel = "Calm";
     pillVariant = "buy";
   } else if (current < 25) {
     pillLabel = "Elevated";
-    pillVariant = "warning";
+    pillVariant = "hold";
   } else {
     pillLabel = "Fear";
     pillVariant = "sell";

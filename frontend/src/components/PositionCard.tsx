@@ -82,7 +82,7 @@ export function PositionCard({ position, style }: Props) {
           {/* P&L badge */}
           {pnl !== null && (
             <Badge
-              variant={pnlPos ? "win" : "loss"}
+              variant={pnlPos ? "buy" : "destructive"}
               className="h-auto px-3 py-1.5 rounded-lg text-right flex flex-col items-end"
             >
               <div className={cn("font-mono text-sm font-semibold", pnlPos ? "text-primary" : "text-destructive")}>
