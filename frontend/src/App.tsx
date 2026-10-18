@@ -43,9 +43,9 @@ function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-xs">
-        <CardHeader className="text-center">
-          <CardTitle className="font-sans text-2xl font-bold text-foreground tracking-tight">
+      <Card className="w-full max-w-sm shadow-lg border border-border/60">
+        <CardHeader className="text-center pb-2">
+          <CardTitle className="font-sans text-3xl font-bold text-foreground tracking-tight">
             SwingIQ
           </CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-1">
@@ -63,7 +63,7 @@ function LoginPage() {
                 setError("");
               }}
               placeholder="Email"
-              className="bg-card text-foreground font-mono text-sm px-4 py-3 h-auto rounded-xl placeholder:text-muted-foreground"
+              className="bg-background text-foreground font-mono text-sm px-4 py-3 h-11 rounded-lg border border-border placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
             />
             <Input
               type="password"
@@ -73,7 +73,7 @@ function LoginPage() {
                 setError("");
               }}
               placeholder="Password"
-              className="bg-card text-foreground font-mono text-sm px-4 py-3 h-auto rounded-xl placeholder:text-muted-foreground"
+              className="bg-background text-foreground font-mono text-sm px-4 py-3 h-11 rounded-lg border border-border placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
             />
             {error && (
               <p className="text-destructive text-xs font-mono text-center">
@@ -83,7 +83,7 @@ function LoginPage() {
             <Button
               type="submit"
               disabled={submitting || !email.trim() || !password.trim()}
-              className="w-full py-3 h-auto rounded-xl bg-ring/15 border border-ring/30 text-ring text-sm font-mono font-medium hover:bg-ring/25"
+              className="w-full h-11 rounded-lg bg-[#1A1A2E] text-white text-sm font-mono font-medium hover:bg-[#1A1A2E]/90 disabled:opacity-40"
             >
               {submitting ? "Signing in..." : "Sign In"}
             </Button>
