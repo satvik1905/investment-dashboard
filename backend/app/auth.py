@@ -54,7 +54,7 @@ async def _load_jwks() -> None:
         )
 
 
-def _get_signing_key(token: str) -> jwt.algorithms.RSAAlgorithm:
+def _get_signing_key(token: str):
     """Find the correct public key from the cached JWKS for the given token."""
     try:
         unverified_header = jwt.get_unverified_header(token)
@@ -95,6 +95,10 @@ async def require_auth(request: Request):
     - Otherwise, fall back to legacy X-SwingIQ-Key password check.
     - If neither is configured, auth is effectively disabled (local dev).
     """
+
+    # ----- Skip auth for health check -----
+    if request.url.path == "/health":
+        return
 
     # ----- Supabase JWT mode -----
     if SUPABASE_URL:
