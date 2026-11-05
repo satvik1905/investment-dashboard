@@ -433,7 +433,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               key={tf}
               value={tf}
               className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                timeframe === tf ? "bg-card text-foreground shadow font-bold" : "text-muted-foreground hover:text-foreground"
+                timeframe === tf ? "bg-card text-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tf}
@@ -445,7 +445,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         <div ref={smaLegendRef} className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground">
           {smaLabels.map((label, i) => (
             <span key={label} className="flex items-center gap-1.5">
-              <span className="inline-block w-5 h-0.5 rounded" style={{ backgroundColor: SMA_COLORS[i] }} />
+              <span className="inline-block w-5 h-0.5 rounded-sm" style={{ backgroundColor: SMA_COLORS[i] }} />
               {label}
             </span>
           ))}
@@ -510,7 +510,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                         { color: "#FFD700", label: "Yellow", desc: "Bearish reversal — SELL signal", border: true },
                       ] as const).map((c) => (
                         <div key={c.label} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
-                          <span className={`w-3 h-3 rounded-sm shrink-0 mt-0.5 ${c.border ? "border border-black/[0.10]" : ""}`} style={{ backgroundColor: c.color }} />
+                          <span className={`w-3 h-3 rounded-xs shrink-0 mt-0.5 ${c.border ? "border border-black/[0.10]" : ""}`} style={{ backgroundColor: c.color }} />
                           <div>
                             <div className="text-xs font-semibold text-foreground">{c.label}</div>
                             <div className="text-[10px] text-muted-foreground leading-snug">{c.desc}</div>
@@ -550,7 +550,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       { color: "#e2e8f0", label: "SMA 200", desc: "Long-term trend", border: true },
                     ] as const).map((s) => (
                       <div key={s.label} className="flex items-center gap-2.5">
-                        <span className={`w-6 h-0.5 rounded shrink-0 ${s.border ? "border border-black/[0.06]" : ""}`} style={{ backgroundColor: s.color }} />
+                        <span className={`w-6 h-0.5 rounded-sm shrink-0 ${s.border ? "border border-black/[0.06]" : ""}`} style={{ backgroundColor: s.color }} />
                         <span className="text-xs text-foreground font-medium font-mono">{s.label}</span>
                         <span className="text-[10px] text-muted-foreground">— {s.desc}</span>
                       </div>
@@ -564,10 +564,10 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 body: (
                   <div className="flex items-start gap-2.5">
                     <div className="flex gap-0.5 shrink-0 mt-0.5">
-                      <span className="w-2.5 h-4 rounded-sm bg-[#4ade80]" />
-                      <span className="w-2.5 h-3 rounded-sm bg-[rgba(34,197,94,0.4)]" />
-                      <span className="w-2.5 h-4 rounded-sm bg-[#f87171]" />
-                      <span className="w-2.5 h-3 rounded-sm bg-[rgba(239,68,68,0.4)]" />
+                      <span className="w-2.5 h-4 rounded-xs bg-[#4ade80]" />
+                      <span className="w-2.5 h-3 rounded-xs bg-[rgba(34,197,94,0.4)]" />
+                      <span className="w-2.5 h-4 rounded-xs bg-[#f87171]" />
+                      <span className="w-2.5 h-3 rounded-xs bg-[rgba(239,68,68,0.4)]" />
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">Green = up day, Red = down day. Bright bars = unusually high volume (2x+ avg), confirming the move.</p>
                   </div>
@@ -578,7 +578,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 body: (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-0.5 rounded shrink-0" style={{ backgroundColor: "#8b5cf6" }} />
+                      <span className="w-6 h-0.5 rounded-sm shrink-0" style={{ backgroundColor: "#8b5cf6" }} />
                       <span className="text-[11px] text-muted-foreground">Purple line oscillating 0–100</span>
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">

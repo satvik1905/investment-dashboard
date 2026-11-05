@@ -54,10 +54,10 @@ export function Sidebar() {
               <path
                 d="M11 1L21 11L11 21L1 11L11 1Z"
                 fill="hsl(138 76% 97%)"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeWidth="1.5"
               />
-              <path d="M11 5L17 11L11 17L5 11L11 5Z" fill="hsl(var(--primary))" opacity="0.5"/>
+              <path d="M11 5L17 11L11 17L5 11L11 5Z" fill="var(--primary)" opacity="0.5"/>
             </svg>
           </div>
           {!collapsed && (

@@ -108,7 +108,7 @@ function PriorTrendBar({
   return (
     <div className="flex items-center gap-1">
       {Array.from({ length: filled }).map((_, i) => (
-        <div key={i} className={`w-2 h-3 rounded-sm ${color}`} />
+        <div key={i} className={`w-2 h-3 rounded-xs ${color}`} />
       ))}
       {n > 12 && <span className="text-muted-foreground text-xs font-mono">+{n - 12}</span>}
       <span className="text-muted-foreground text-xs font-mono ml-1">{n}{unit}</span>
@@ -565,7 +565,7 @@ export function Scanner() {
                   onClick={() => setActiveCandle(tab.key)}
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-mono font-medium border transition-all cursor-pointer ${
                     isActive
-                      ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
+                      ? "bg-primary/10 text-primary border-primary/30 shadow-xs"
                       : "bg-card text-muted-foreground border-black/[0.12] hover:border-primary/20 hover:text-foreground hover:bg-primary/[0.04]"
                   }`}
                 >

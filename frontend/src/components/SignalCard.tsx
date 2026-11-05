@@ -343,7 +343,7 @@ export function SignalCard({ signal, liveQuote, style, onRemove }: Props) {
           <DialogHeader className="items-center">
             <div className="flex items-center justify-center w-11 h-11 rounded-full bg-destructive/10 border border-destructive/20 mb-2">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M3 5h14M8 5V3.5h4V5M4 5l1 12h10l1-12" stroke="hsl(var(--destructive))" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M3 5h14M8 5V3.5h4V5M4 5l1 12h10l1-12" stroke="var(--destructive)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
             <DialogTitle className="text-foreground text-center text-sm">

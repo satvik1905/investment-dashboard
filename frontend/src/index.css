@@ -1,66 +1,142 @@
+@import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ── Shadcn core ─────────────────────────────────────── */
+  --background:           hsl(210 40% 96%);    /* slate-100 */
+  --foreground:           hsl(222 47% 11%);    /* slate-900 */
+  --card:                 hsl(0 0% 100%);      /* white */
+  --card-foreground:      hsl(222 47% 11%);
+  --popover:              hsl(0 0% 100%);
+  --popover-foreground:   hsl(222 47% 11%);
+  --primary:              hsl(142 72% 29%);    /* green-700 */
+  --primary-foreground:   hsl(0 0% 100%);
+  --secondary:            hsl(210 40% 96%);    /* slate-100 */
+  --secondary-foreground: hsl(222 47% 11%);
+  --destructive:          hsl(0 72% 51%);      /* red-600 */
+  --destructive-foreground: hsl(0 0% 100%);
+  --muted:                hsl(210 40% 96%);    /* slate-100 */
+  --muted-foreground:     hsl(215 16% 47%);    /* slate-500 */
+  --accent:               hsl(210 40% 96%);
+  --accent-foreground:    hsl(222 47% 11%);
+  --border:               hsl(214 32% 91%);    /* slate-200 */
+  --input:                hsl(213 27% 84%);    /* slate-300 */
+  --ring:                 hsl(142 72% 29%);    /* green-700 */
+  --radius:               0.5rem;
+
+  /* ── Signal badges ───────────────────────────────────── */
+  --signal-buy-bg:        hsl(138 76% 97%);    /* green-50 */
+  --signal-buy-border:    hsl(141 79% 85%);    /* green-200 */
+  --signal-buy-fg:        hsl(143 64% 24%);    /* green-800 */
+  --signal-sell-bg:       hsl(0 86% 97%);      /* red-50 */
+  --signal-sell-border:   hsl(0 96% 89%);      /* red-200 */
+  --signal-sell-fg:       hsl(0 70% 35%);      /* red-800 */
+  --signal-hold-bg:       hsl(210 40% 96%);    /* slate-100 */
+  --signal-hold-border:   hsl(214 32% 91%);    /* slate-200 */
+  --signal-hold-fg:       hsl(215 19% 35%);    /* slate-600 */
+
+  /* ── Price levels ────────────────────────────────────── */
+  --price-target:         hsl(142 72% 29%);    /* green-700 */
+  --price-stop:           hsl(0 74% 42%);      /* red-700 */
+
+  /* ── Confidence ──────────────────────────────────────── */
+  --conf-track:           hsl(214 32% 91%);    /* slate-200 */
+  --conf-fill:            hsl(215 20% 65%);    /* slate-400 */
+
+  /* ── Market status ───────────────────────────────────── */
+  --status-open:          hsl(142 76% 36%);    /* green-600 */
+  --status-after:         hsl(38 92% 50%);     /* amber-500 */
+  --status-closed:        hsl(215 20% 65%);    /* slate-400 */
+}
+
+@theme inline {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-signal-buy-bg: var(--signal-buy-bg);
+  --color-signal-buy-border: var(--signal-buy-border);
+  --color-signal-buy-fg: var(--signal-buy-fg);
+  --color-signal-sell-bg: var(--signal-sell-bg);
+  --color-signal-sell-border: var(--signal-sell-border);
+  --color-signal-sell-fg: var(--signal-sell-fg);
+  --color-signal-hold-bg: var(--signal-hold-bg);
+  --color-signal-hold-border: var(--signal-hold-border);
+  --color-signal-hold-fg: var(--signal-hold-fg);
+
+  --color-price-target: var(--price-target);
+  --color-price-stop: var(--price-stop);
+
+  --color-conf-track: var(--conf-track);
+  --color-conf-fill: var(--conf-fill);
+
+  --color-status-open: var(--status-open);
+  --color-status-after: var(--status-after);
+  --color-status-closed: var(--status-closed);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-sans);
+  --font-geist-sans: var(--font-sans);
+  --font-geist-mono: var(--font-mono);
+
+  --animate-fade-in: fadeIn 0.3s ease forwards;
+  --animate-slide-up: slideUp 0.35s ease forwards;
+  --animate-pulse-slow: pulse 3s ease-in-out infinite;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
 
 @layer base {
-  :root {
-    /* ── Shadcn core ─────────────────────────────────────── */
-    --background:           210 40% 96%;    /* slate-100 */
-    --foreground:           222 47% 11%;    /* slate-900 */
-    --card:                 0 0% 100%;      /* white */
-    --card-foreground:      222 47% 11%;
-    --popover:              0 0% 100%;
-    --popover-foreground:   222 47% 11%;
-    --primary:              142 72% 29%;    /* green-700 */
-    --primary-foreground:   0 0% 100%;
-    --secondary:            210 40% 96%;    /* slate-100 */
-    --secondary-foreground: 222 47% 11%;
-    --destructive:          0 72% 51%;      /* red-600 */
-    --destructive-foreground: 0 0% 100%;
-    --muted:                210 40% 96%;    /* slate-100 */
-    --muted-foreground:     215 16% 47%;    /* slate-500 */
-    --accent:               210 40% 96%;
-    --accent-foreground:    222 47% 11%;
-    --border:               214 32% 91%;    /* slate-200 */
-    --input:                213 27% 84%;    /* slate-300 */
-    --ring:                 142 72% 29%;    /* green-700 */
-    --radius:               0.5rem;
-
-    /* ── Signal badges ───────────────────────────────────── */
-    --signal-buy-bg:        138 76% 97%;    /* green-50 */
-    --signal-buy-border:    141 79% 85%;    /* green-200 */
-    --signal-buy-fg:        143 64% 24%;    /* green-800 */
-    --signal-sell-bg:       0 86% 97%;      /* red-50 */
-    --signal-sell-border:   0 96% 89%;      /* red-200 */
-    --signal-sell-fg:       0 70% 35%;      /* red-800 */
-    --signal-hold-bg:       210 40% 96%;    /* slate-100 */
-    --signal-hold-border:   214 32% 91%;    /* slate-200 */
-    --signal-hold-fg:       215 19% 35%;    /* slate-600 */
-
-    /* ── Price levels ────────────────────────────────────── */
-    --price-target:         142 72% 29%;    /* green-700 */
-    --price-stop:           0 74% 42%;      /* red-700 */
-
-    /* ── Confidence ──────────────────────────────────────── */
-    --conf-track:           214 32% 91%;    /* slate-200 */
-    --conf-fill:            215 20% 65%;    /* slate-400 */
-
-    /* ── Market status ───────────────────────────────────── */
-    --status-open:          142 76% 36%;    /* green-600 */
-    --status-after:         38 92% 50%;     /* amber-500 */
-    --status-closed:        215 20% 65%;    /* slate-400 */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border);
   }
 
-  * {
-    border-color: hsl(var(--border));
+  /* v3 parity: buttons show a pointer cursor */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -68,6 +144,6 @@
 
 /* ── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-track { background: var(--background); }
 ::-webkit-scrollbar-thumb { background: hsl(213 27% 84%); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(215 20% 65%); }
