@@ -5,13 +5,13 @@ Uses FastAPI BackgroundTasks — no Celery worker required.
 
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, func
 
 from ..database import SessionLocal, get_db
 from ..models import ScannerResult
@@ -100,6 +100,7 @@ class ScannerResultResponse(BaseModel):
     monthly_candle_color: Optional[str] = None
     monthly_prior_candle_count: Optional[int] = None
     monthly_months_since_flip: Optional[int] = None
+    created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -130,6 +131,19 @@ def get_latest_scan_date(db: Session = Depends(get_db)):
     if not row:
         return {"latest_date": None}
     return {"latest_date": str(row.scan_date)}
+
+
+@router.get("/dates")
+def get_scan_dates(db: Session = Depends(get_db)):
+    """Recent scan dates with result counts, newest first (for the date picker)."""
+    rows = (
+        db.query(ScannerResult.scan_date, func.count(ScannerResult.id))
+        .group_by(ScannerResult.scan_date)
+        .order_by(desc(ScannerResult.scan_date))
+        .limit(26)
+        .all()
+    )
+    return [{"scan_date": str(d), "count": n} for d, n in rows]
 
 
 @router.get("/results", response_model=list[ScannerResultResponse])
