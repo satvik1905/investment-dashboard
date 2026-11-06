@@ -217,6 +217,32 @@ export function StockDetailModal({ ticker, onClose }: Props) {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
+  // Dialog focus: move focus in on open, keep Tab inside, give it back on close
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLElement>("[data-dialog-close]")?.focus();
+
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", trap);
+    return () => {
+      document.removeEventListener("keydown", trap);
+      opener?.focus?.();
+    };
+  }, []);
+
   // ── Build charts ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mainRef.current || !volRef.current || !rsiRef.current) return;
@@ -343,7 +369,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       if (!candle) { tooltip.style.display = "none"; return; }
 
       const isUp = candle.close >= candle.open;
-      const clr = isUp ? "#22c55e" : "#ef4444";
+      // Darker than the chart's line colors so the values pass 4.5:1 on the white tooltip
+      const clr = isUp ? "#15803d" : "#b91c1c";
       const fmt = (n: number) => n.toFixed(2);
 
       const d = new Date(timeStr + "T00:00:00");
@@ -366,13 +393,13 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       tooltip.innerHTML = `
         <div style="border-left:3px solid ${clr};padding-left:8px">
           <div style="color:#1A1A2E;font-size:12px;font-weight:600">${timeframe === "D" ? `${weekday}, ` : ""}${dateLabel}</div>
-          <div style="color:#64748b;font-size:10px;margin-top:1px">${subLabel}</div>
+          <div style="color:#64748b;font-size:11px;margin-top:1px">${subLabel}</div>
         </div>
-        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:11px;font-family:'Roboto Mono',monospace">
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:11px;font-family:var(--font-mono)">
           <div><span style="color:#64748b">O</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.open)}</span></div>
-          <div><span style="color:#64748b">H</span>&nbsp;<span style="color:#22c55e">${fmt(candle.high)}</span></div>
+          <div><span style="color:#64748b">H</span>&nbsp;<span style="color:#15803d">${fmt(candle.high)}</span></div>
           <div><span style="color:#64748b">C</span>&nbsp;<span style="color:${clr}">${fmt(candle.close)}</span></div>
-          <div><span style="color:#64748b">L</span>&nbsp;<span style="color:#ef4444">${fmt(candle.low)}</span></div>
+          <div><span style="color:#64748b">L</span>&nbsp;<span style="color:#b91c1c">${fmt(candle.low)}</span></div>
         </div>
       `;
 
@@ -420,15 +447,30 @@ export function StockDetailModal({ ticker, onClose }: Props) {
     d === "UP" ? "↑" : d === "DOWN" ? "↓" : "→";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${ticker} chart and signal`}
+      className="fixed inset-0 z-50 flex flex-col bg-background"
+    >
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 sm:px-5 py-3 border-b border-black/[0.10] bg-card shrink-0">
 
         {/* Left: close + ticker + price + signal badge */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <Button variant="ghost" size="icon-xs" onClick={handleClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">
-            ✕
+          <Button
+            data-dialog-close
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleClose}
+            aria-label="Close"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
           </Button>
           <div className="flex items-baseline gap-2.5">
             <span className="font-mono text-xl font-semibold text-foreground">{ticker}</span>
@@ -816,7 +858,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     />
                   </div>
                   <span className={`font-mono text-sm tabular-nums font-semibold w-7 text-right ${
-                    confidence <= 25 ? "text-destructive" : confidence <= 75 ? "text-status-after" : "text-primary"
+                    confidence <= 25 ? "text-destructive" : confidence <= 75 ? "text-amber-700" : "text-primary"
                   }`}>{confidence}</span>
                 </div>
               </div>

@@ -128,8 +128,14 @@ function StateCell({ signal }: { signal: Signal }) {
 // ── Sort arrow ───────────────────────────────────────────────────────────────
 
 function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
-  if (!active) return <span className="text-muted-foreground/50 ml-1 text-[11px]">⇅</span>;
-  return <span className="text-foreground ml-1 text-[11px]">{dir === "asc" ? "↑" : "↓"}</span>;
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden className="shrink-0">
+      <path d="M2.5 4L5 1.5 7.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"
+        className={active && dir === "asc" ? "text-foreground" : active ? "opacity-0" : "opacity-40"} />
+      <path d="M2.5 6L5 8.5 7.5 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"
+        className={active && dir === "desc" ? "text-foreground" : active ? "opacity-0" : "opacity-40"} />
+    </svg>
+  );
 }
 
 // ── Confidence cell — single colour, no threshold ───────────────────────────
@@ -295,9 +301,16 @@ function SignalRow({
         onClick={() => onRowClick(signal)}
         className="cursor-pointer hover:bg-accent"
       >
-        {/* Ticker */}
-        <TableCell className="py-2.5 px-3 pl-4 font-mono text-sm font-semibold text-foreground whitespace-nowrap">
-          {signal.ticker}
+        {/* Ticker — the keyboard and screen-reader way into the row */}
+        <TableCell className="py-2.5 px-3 pl-4 whitespace-nowrap">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRowClick(signal); }}
+            aria-label={`Open ${signal.ticker} chart and signal`}
+            className="font-mono text-sm font-semibold text-foreground hover:text-primary hover:underline underline-offset-4 rounded-sm"
+          >
+            {signal.ticker}
+          </button>
         </TableCell>
 
         {/* Candle state */}
@@ -337,10 +350,11 @@ function SignalRow({
               onClick={(e) => { e.stopPropagation(); actions.refresh(); }}
               disabled={actions.refreshing}
               title="Refresh signal"
-              className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 h-7 w-7"
+              aria-label={`Refresh ${signal.ticker} signal`}
+              className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 w-7"
             >
               {actions.refreshing ? (
-                <span className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin block" />
+                <span className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin block" />
               ) : (
                 <RefreshIcon />
               )}
@@ -350,7 +364,8 @@ function SignalRow({
               size="icon-xs"
               onClick={(e) => { e.stopPropagation(); actions.askRemove(); }}
               title="Remove from watchlist"
-              className="text-red-400 hover:text-destructive hover:bg-red-50 h-7 w-7"
+              aria-label={`Remove ${signal.ticker} from watchlist`}
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7"
             >
               <TrashIcon />
             </Button>
@@ -622,6 +637,7 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
           size="icon-xs"
           onClick={() => setConfVariant((v) => (v === "number" ? "bar" : "number"))}
           title={`Confidence: ${confVariant === "number" ? "number only" : "number + bar"}`}
+          aria-label={`Show confidence as ${confVariant === "number" ? "number and bar" : "number only"}`}
           className="hidden lg:inline-flex text-[10px] font-mono"
         >
           {confVariant === "number" ? "#" : "▬"}
@@ -636,14 +652,23 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
             {COLS.map((col) => (
               <TableHead
                 key={col.key}
-                onClick={() => handleSort(col.key)}
+                aria-sort={sortKey === col.key ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                 className={cn(
-                  "h-9 px-3 first:pl-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap sticky top-0 bg-card z-10",
+                  "h-9 px-3 first:pl-4 whitespace-nowrap sticky top-0 bg-card z-10",
                   col.align,
                 )}
               >
-                {col.label}
-                <SortArrow active={sortKey === col.key} dir={sortDir} />
+                <button
+                  type="button"
+                  onClick={() => handleSort(col.key)}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-sm text-[11px] font-medium uppercase tracking-wide transition-colors hover:text-foreground",
+                    sortKey === col.key ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {col.label}
+                  <SortArrow active={sortKey === col.key} dir={sortDir} />
+                </button>
               </TableHead>
             ))}
             <TableHead className="h-9 px-3 w-16 sticky top-0 bg-card z-10" />

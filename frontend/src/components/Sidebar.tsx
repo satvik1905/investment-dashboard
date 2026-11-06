@@ -65,7 +65,7 @@ export function Sidebar() {
               <div className="font-sans font-bold text-foreground text-base tracking-tight leading-none">
                 SwingIQ
               </div>
-              <div className="text-[10px] text-muted-foreground tracking-widest uppercase font-mono mt-0.5">
+              <div className="text-[11px] text-muted-foreground tracking-widest uppercase font-mono mt-0.5">
                 Trading Terminal
               </div>
             </div>
