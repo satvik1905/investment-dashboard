@@ -10,7 +10,6 @@ import { useRemoveSignal, useGenerateSignal } from "../hooks/useSignals";
 import { TickerAutocomplete } from "../components/TickerAutocomplete";
 import { AlertBanner } from "../components/AlertBanner";
 import { ErrorState } from "../components/ErrorState";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,23 +48,6 @@ function EmptyState({ message }: { message: string }) {
         <span className="text-muted-foreground text-lg">◎</span>
       </div>
       <p className="text-muted-foreground text-sm">{message}</p>
-    </div>
-  );
-}
-
-// ── Section header ────────────────────────────────────────────────────────────
-
-function SectionHeader({ title, count }: { title: string; count?: number }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <h2 className="text-muted-foreground text-xs font-semibold uppercase tracking-widest font-mono">
-        {title}
-      </h2>
-      {count !== undefined && (
-        <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
-          {count}
-        </Badge>
-      )}
     </div>
   );
 }
@@ -211,7 +193,6 @@ export function Dashboard() {
 
         {/* Signals */}
         <section>
-          <SectionHeader title="Signals" count={signals?.length} />
           {signalsQuery.isError && signals && (
             <ErrorState
               compact

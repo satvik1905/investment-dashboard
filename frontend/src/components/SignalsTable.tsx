@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { Fragment, useState, useMemo, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "../api/client";
@@ -56,9 +56,6 @@ interface Props {
 
 // ── Candle state ─────────────────────────────────────────────────────────────
 
-// A flip within this many candles (the flip candle and the one after) counts as new
-const RECENT_FLIP_CANDLES = 2;
-
 const STATE_LABEL: Record<CandleColor, string> = {
   RED: "Bullish flip",
   YELLOW: "Bearish flip",
@@ -98,19 +95,31 @@ function candleState(signal: Signal): CandleState {
   return { color, label: STATE_LABEL[color], detail, sinceFlip };
 }
 
-function needsAttention(signal: Signal): boolean {
+type Bucket = "flipped" | "confirming" | "stale" | "holding";
+
+/** Each signal lands in exactly one group. A stale signal's flip info is old, so staleness wins. */
+function bucketOf(signal: Signal): Bucket {
+  if (isStale(signal.generated_at)) return "stale";
   const { sinceFlip } = candleState(signal);
-  return (sinceFlip != null && sinceFlip < RECENT_FLIP_CANDLES) || isStale(signal.generated_at);
+  if (sinceFlip === 0) return "flipped";
+  if (sinceFlip === 1) return "confirming";
+  return "holding";
 }
 
+const ATTENTION_GROUPS: { key: Exclude<Bucket, "holding">; title: string; note: string }[] = [
+  { key: "flipped",    title: "Flipped on the latest close", note: "new red or yellow candle" },
+  { key: "confirming", title: "Flipped one candle ago",      note: "first candle of the new trend" },
+  { key: "stale",      title: "Out of date",                 note: "calculated before the last market close" },
+];
+
 function defaultOrder(a: Signal, b: Signal): number {
-  // Within a group, signals built on data that needs checking go after clean ones
-  const byData = Number(needsDataCheck(a)) - Number(needsDataCheck(b));
-  if (byData !== 0) return byData;
   const sa = candleState(a);
   const sb = candleState(b);
   const byState = (sa.color ? STATE_ORDER[sa.color] : 9) - (sb.color ? STATE_ORDER[sb.color] : 9);
   if (byState !== 0) return byState;
+  // Within a state, signals built on data that needs checking go after clean ones
+  const byData = Number(needsDataCheck(a)) - Number(needsDataCheck(b));
+  if (byData !== 0) return byData;
   return (sa.sinceFlip ?? 999) - (sb.sinceFlip ?? 999);
 }
 
@@ -267,11 +276,8 @@ function AgeLabel({ signal }: { signal: Signal }) {
       </span>
     );
   }
-  return (
-    <span className="text-xs text-muted-foreground whitespace-nowrap" title={signal.generated_at ? new Date(signal.generated_at).toLocaleString() : undefined}>
-      {signalAge(signal.generated_at)}
-    </span>
-  );
+  // Current signals show nothing, so the out-of-date chips stand out
+  return null;
 }
 
 function rowPrices(signal: Signal, quote?: LiveQuote) {
@@ -464,32 +470,98 @@ function SignalCard({
   );
 }
 
-// ── Group header row ─────────────────────────────────────────────────────────
+// ── Group headers ────────────────────────────────────────────────────────────
 
-function GroupHeader({ title, count, note }: { title: string; count: number; note: string }) {
+interface GroupHeaderProps {
+  title: string;
+  count: number;
+  note: string;
+  /** Present only for the collapsible "Holding trend" group */
+  toggle?: { expanded: boolean; onToggle: () => void };
+}
+
+function GroupTitle({ title, count, note, toggle }: GroupHeaderProps) {
+  const heading = (
+    <>
+      <span className="text-sm font-semibold text-foreground">{title}</span>
+      <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
+      {/* Desktop keeps the note inline after a dot; cards put it on its own line */}
+      <span className="text-xs text-muted-foreground max-lg:basis-full max-lg:mt-0.5">
+        <span className="max-lg:hidden">· </span>{note}
+      </span>
+    </>
+  );
+  if (!toggle) return <h3 className="flex flex-wrap items-baseline gap-x-2">{heading}</h3>;
+  return (
+    <h3>
+      <button
+        type="button"
+        onClick={toggle.onToggle}
+        aria-expanded={toggle.expanded}
+        className="flex flex-wrap items-baseline gap-x-2 rounded-sm text-left cursor-pointer group"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden
+          className={cn("shrink-0 self-center text-muted-foreground transition-transform", toggle.expanded && "rotate-90")}>
+          <path d="M3.5 2L6.5 5 3.5 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        {heading}
+        <span className="text-xs font-medium text-foreground underline underline-offset-4 decoration-border group-hover:decoration-foreground">
+          {toggle.expanded ? "Hide" : "Show"}
+        </span>
+      </button>
+    </h3>
+  );
+}
+
+function GroupHeader(props: GroupHeaderProps) {
   return (
     <TableRow className="hover:bg-transparent border-b border-border">
       <TableCell colSpan={COL_COUNT} className="pt-5 pb-2 px-4 bg-card">
-        <div className="flex items-baseline gap-2">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
-          <span className="text-xs text-muted-foreground">· {note}</span>
-        </div>
+        <GroupTitle {...props} />
       </TableCell>
     </TableRow>
   );
 }
 
-function MobileGroupHeader({ title, count, note }: { title: string; count: number; note: string }) {
+function MobileGroupHeader(props: GroupHeaderProps) {
   return (
     <div className="px-4 pt-5 pb-2 border-b border-border">
-      <div className="flex items-baseline gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
-      </div>
-      <p className="text-xs text-muted-foreground mt-0.5">{note}</p>
+      <GroupTitle {...props} />
     </div>
   );
+}
+
+function FlipSummary({ bullish, bearish, confirming, stale }: { bullish: number; bearish: number; confirming: number; stale: number }) {
+  const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+  return (
+    <div className="px-4 pt-4 pb-3 border-b border-border">
+      <h2 className="text-xs font-medium text-muted-foreground">Since the last close</h2>
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <CandleSwatch color="RED" />
+          <span className="font-mono font-semibold tabular-nums">{bullish}</span>
+          {plural(bullish, "bullish flip", "bullish flips")}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <CandleSwatch color="YELLOW" />
+          <span className="font-mono font-semibold tabular-nums">{bearish}</span>
+          {plural(bearish, "bearish flip", "bearish flips")}
+        </span>
+        <span className="text-muted-foreground">
+          <span className="font-mono tabular-nums">{confirming}</span> flipped a candle ago
+        </span>
+        <span className={stale > 0 ? "font-medium text-amber-800" : "text-muted-foreground"}>
+          <span className="font-mono tabular-nums">{stale}</span> out of date
+        </span>
+      </p>
+    </div>
+  );
+}
+
+const HOLDING_KEY = "watchlist-holding-expanded";
+
+function readHoldingExpanded(): boolean {
+  try { return localStorage.getItem(HOLDING_KEY) === "1"; } catch { return false; }
 }
 
 // Ticker, State, Price, Change, Updated, actions
@@ -510,6 +582,26 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [holdingExpanded, setHoldingExpanded] = useState(readHoldingExpanded);
+
+  const toggleHolding = () => {
+    setHoldingExpanded((v) => {
+      try { localStorage.setItem(HOLDING_KEY, v ? "0" : "1"); } catch { /* per-viewer convenience only */ }
+      return !v;
+    });
+  };
+
+  // Summary counts always describe the whole watchlist, not the filtered view
+  const summary = useMemo(() => {
+    const counts = { bullish: 0, bearish: 0, confirming: 0, stale: 0 };
+    for (const s of signals) {
+      const b = bucketOf(s);
+      if (b === "flipped") candleState(s).color === "RED" ? counts.bullish++ : counts.bearish++;
+      else if (b === "confirming") counts.confirming++;
+      else if (b === "stale") counts.stale++;
+    }
+    return counts;
+  }, [signals]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -520,7 +612,7 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
     }
   };
 
-  const { attention, holding } = useMemo(() => {
+  const groups = useMemo(() => {
     let list = [...signals];
 
     if (search) {
@@ -547,14 +639,23 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
     };
 
     // Sorting applies within each group; the groups themselves stay in place
-    return {
-      attention: list.filter(needsAttention).sort(compare),
-      holding: list.filter((s) => !needsAttention(s)).sort(compare),
-    };
+    const byBucket: Record<Bucket, Signal[]> = { flipped: [], confirming: [], stale: [], holding: [] };
+    for (const s of list) byBucket[bucketOf(s)].push(s);
+    for (const k of Object.keys(byBucket) as Bucket[]) byBucket[k].sort(compare);
+    return byBucket;
   }, [signals, quotes, search, stateFilter, sortKey, sortDir]);
 
   const filtering = !!search || stateFilter !== "all";
-  const total = attention.length + holding.length;
+  const holding = groups.holding;
+  const attentionCount = groups.flipped.length + groups.confirming.length + groups.stale.length;
+  const total = attentionCount + holding.length;
+  // While searching or filtering, show matches even if the group is collapsed
+  const showHolding = holdingExpanded || filtering;
+  const holdingSplit = (() => {
+    const up = holding.filter((s) => candleState(s).color === "BLUE").length;
+    return `${up} uptrend · ${holding.length - up} downtrend`;
+  })();
+  const holdingToggle = filtering ? undefined : { expanded: holdingExpanded, onToggle: toggleHolding };
 
   const COLS: { key: SortKey; label: string; align?: string }[] = [
     { key: "ticker",     label: "Ticker" },
@@ -578,11 +679,7 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
   ) : (
     "No signals yet."
   );
-  const quietMessage = filtering
-    ? "Nothing here matches your filter."
-    : `Nothing new — no flips in the last ${RECENT_FLIP_CANDLES} candles, and every signal is current.`;
-  const attentionNote = `flipped in the last ${RECENT_FLIP_CANDLES} candles, or out of date`;
-  const holdingNote = `no flip in the last ${RECENT_FLIP_CANDLES} candles`;
+  const quietMessage = "Nothing new since the last close — no flips, and every signal is current.";
 
   const renderCards = (rows: Signal[]) => (
     <ul>
@@ -611,6 +708,8 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+      <FlipSummary {...summary} />
+
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <div className="relative flex-1 min-w-0 lg:flex-none lg:w-52">
@@ -683,14 +782,15 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
             </TableRow>
           ) : (
             <>
-              <GroupHeader
-                title="Needs attention"
-                count={attention.length}
-                note={attentionNote}
-              />
-              {attention.length > 0 ? (
-                renderRows(attention)
-              ) : (
+              {ATTENTION_GROUPS.map((g) =>
+                groups[g.key].length > 0 && (
+                  <Fragment key={g.key}>
+                    <GroupHeader title={g.title} count={groups[g.key].length} note={g.note} />
+                    {renderRows(groups[g.key])}
+                  </Fragment>
+                ),
+              )}
+              {attentionCount === 0 && !filtering && (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={COL_COUNT} className="px-4 py-4 text-sm text-muted-foreground">
                     {quietMessage}
@@ -699,12 +799,8 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
               )}
               {holding.length > 0 && (
                 <>
-                  <GroupHeader
-                    title="Holding trend"
-                    count={holding.length}
-                    note={holdingNote}
-                  />
-                  {renderRows(holding)}
+                  <GroupHeader title="Holding trend" count={holding.length} note={holdingSplit} toggle={holdingToggle} />
+                  {showHolding && renderRows(holding)}
                 </>
               )}
             </>
@@ -719,16 +815,21 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           <>
-            <MobileGroupHeader title="Needs attention" count={attention.length} note={attentionNote} />
-            {attention.length > 0 ? (
-              renderCards(attention)
-            ) : (
+            {ATTENTION_GROUPS.map((g) =>
+              groups[g.key].length > 0 && (
+                <Fragment key={g.key}>
+                  <MobileGroupHeader title={g.title} count={groups[g.key].length} note={g.note} />
+                  {renderCards(groups[g.key])}
+                </Fragment>
+              ),
+            )}
+            {attentionCount === 0 && !filtering && (
               <p className="px-4 py-4 text-sm text-muted-foreground border-b border-border">{quietMessage}</p>
             )}
             {holding.length > 0 && (
               <>
-                <MobileGroupHeader title="Holding trend" count={holding.length} note={holdingNote} />
-                {renderCards(holding)}
+                <MobileGroupHeader title="Holding trend" count={holding.length} note={holdingSplit} toggle={holdingToggle} />
+                {showHolding && renderCards(holding)}
               </>
             )}
           </>
