@@ -58,11 +58,13 @@ const TF_CONFIG: Record<Timeframe, { period: string; interval: string; label: st
   M: { period: "5y",  interval: "1mo", label: "Monthly" },
 };
 
-const SMA_COLORS = ["#3b82f6", "#f97316", "#e2e8f0"] as const;
+const SMA_COLORS = ["#3b82f6", "#f97316", "#64748b"] as const;
+// Support/resistance and RSI bands: neutral, because red/green mean candle direction here
+const LEVEL_COLOR = "#475569";
 
 const DC_FILL: Record<DannyColor, string> = {
   BLUE:   "#1565C0",
-  CYAN:   "#00FFFF",
+  CYAN:   "#06B6D4",
   RED:    "#FF4444",
   YELLOW: "#FFD700",
 };
@@ -272,6 +274,11 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       groups[colorByTime.get(c.time) ?? "BLUE"].push(c);
     }
 
+    // Each color is its own series; only the one holding the latest candle may label the
+    // price axis, otherwise every series shows its own "last price"
+    const lastCandle = data.candles[data.candles.length - 1];
+    const latestColor = colorByTime.get(lastCandle.time) ?? "BLUE";
+
     let priceSeries: ReturnType<typeof main.addCandlestickSeries> | null = null;
     for (const colorName of ["BLUE", "CYAN", "RED", "YELLOW"] as DannyColor[]) {
       if (!groups[colorName].length) continue;
@@ -282,6 +289,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         borderUpColor: fill, borderDownColor: fill,
         wickUpColor: wick, wickDownColor: wick,
         priceLineVisible: false,
+        lastValueVisible: colorName === latestColor,
       });
       s.setData(groups[colorName]);
       if (!priceSeries) priceSeries = s;
@@ -304,8 +312,9 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       const pl = (price: number, color: string, title: string, style: LineStyle) =>
         priceSeries!.createPriceLine({ price, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true, title });
 
-      if (data.support)    pl(data.support,    "#22c55e", "Support",    LineStyle.Dashed);
-      if (data.resistance) pl(data.resistance, "#ef4444", "Resistance", LineStyle.Dashed);
+      // Neutral ink: in this system red means a bullish candle, so levels don't use it
+      if (data.support)    pl(data.support,    LEVEL_COLOR, "Support",    LineStyle.Dashed);
+      if (data.resistance) pl(data.resistance, LEVEL_COLOR, "Resistance", LineStyle.Dashed);
     }
 
     // ── Volume ───────────────────────────────────────────────────────────────
@@ -313,14 +322,9 @@ export function StockDetailModal({ ticker, onClose }: Props) {
     vol.priceScale("vol").applyOptions({ scaleMargins: { top: 0.1, bottom: 0 } });
     volSeries.setData(
       data.candles.map(c => {
-        const up   = c.close >= c.open;
+        // Neutral bars; only unusual volume (>2x average) is emphasised
         const high = data.volume_avg != null && c.volume > data.volume_avg * 2;
-        return {
-          time: c.time, value: c.volume,
-          color: up
-            ? (high ? "#4ade80" : "rgba(34,197,94,0.4)")
-            : (high ? "#f87171" : "rgba(239,68,68,0.4)"),
-        };
+        return { time: c.time, value: c.volume, color: high ? "#475569" : "rgba(100,116,139,0.35)" };
       })
     );
 
@@ -331,8 +335,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 }, margins: { above: 8, below: 8 } }),
     });
     rsiLine.setData(data.rsi);
-    rsiLine.createPriceLine({ price: 70, color: "rgba(239,68,68,0.7)",  lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "OB 70" });
-    rsiLine.createPriceLine({ price: 30, color: "rgba(34,197,94,0.7)",  lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "OS 30" });
+    rsiLine.createPriceLine({ price: 70, color: LEVEL_COLOR, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "OB 70" });
+    rsiLine.createPriceLine({ price: 30, color: LEVEL_COLOR, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "OS 30" });
 
     main.timeScale().fitContent();
 
@@ -368,9 +372,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       const candle = candleByTime.get(timeStr);
       if (!candle) { tooltip.style.display = "none"; return; }
 
-      const isUp = candle.close >= candle.open;
-      // Darker than the chart's line colors so the values pass 4.5:1 on the white tooltip
-      const clr = isUp ? "#15803d" : "#b91c1c";
+      const swatch = DC_FILL[colorByTime.get(timeStr) ?? "BLUE"];
       const fmt = (n: number) => n.toFixed(2);
 
       const d = new Date(timeStr + "T00:00:00");
@@ -391,15 +393,18 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       }
 
       tooltip.innerHTML = `
-        <div style="border-left:3px solid ${clr};padding-left:8px">
-          <div style="color:#1A1A2E;font-size:12px;font-weight:600">${timeframe === "D" ? `${weekday}, ` : ""}${dateLabel}</div>
-          <div style="color:#64748b;font-size:11px;margin-top:1px">${subLabel}</div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="width:6px;height:16px;border-radius:2px;background:${swatch};box-shadow:0 0 0 1px rgba(0,0,0,0.15);margin-top:1px;flex-shrink:0"></span>
+          <div>
+            <div style="color:#1A1A2E;font-size:12px;font-weight:600">${timeframe === "D" ? `${weekday}, ` : ""}${dateLabel}</div>
+            <div style="color:#64748b;font-size:11px;margin-top:1px">${subLabel}</div>
+          </div>
         </div>
         <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:11px;font-family:var(--font-mono)">
           <div><span style="color:#64748b">O</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.open)}</span></div>
-          <div><span style="color:#64748b">H</span>&nbsp;<span style="color:#15803d">${fmt(candle.high)}</span></div>
-          <div><span style="color:#64748b">C</span>&nbsp;<span style="color:${clr}">${fmt(candle.close)}</span></div>
-          <div><span style="color:#64748b">L</span>&nbsp;<span style="color:#b91c1c">${fmt(candle.low)}</span></div>
+          <div><span style="color:#64748b">H</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.high)}</span></div>
+          <div><span style="color:#64748b">C</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.close)}</span></div>
+          <div><span style="color:#64748b">L</span>&nbsp;<span style="color:#1A1A2E">${fmt(candle.low)}</span></div>
         </div>
       `;
 
@@ -480,7 +485,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               <span className="font-mono text-base text-muted-foreground">${currentPrice.toFixed(2)}</span>
             )}
             {changePct != null && (
-              <span className={`font-mono text-xs ${changePct >= 0 ? "text-primary" : "text-destructive"}`}>
+              <span className="font-mono text-xs text-muted-foreground">
                 {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
               </span>
             )}
@@ -598,8 +603,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 body: (
                   <div className="space-y-2">
                     {([
-                      { color: "#22c55e", style: "dashed", label: "Support", desc: "Lowest low of the last 20 bars" },
-                      { color: "#ef4444", style: "dashed", label: "Resistance", desc: "Highest high of the last 20 bars" },
+                      { color: LEVEL_COLOR, style: "dashed", label: "Support", desc: "Lowest low of the last 20 bars" },
+                      { color: LEVEL_COLOR, style: "dashed", label: "Resistance", desc: "Highest high of the last 20 bars" },
                     ] as const).map((l) => (
                       <div key={l.label} className="flex items-center gap-2.5">
                         <span className="w-6 shrink-0" style={{ borderBottom: `2px ${l.style} ${l.color}` }} />

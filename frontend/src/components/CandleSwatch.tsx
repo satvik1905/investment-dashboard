@@ -2,8 +2,7 @@ import { cn } from "@/lib/utils";
 
 export type CandleColor = "RED" | "YELLOW" | "BLUE" | "CYAN";
 
-// Same fills as the chart (StockDetailModal DC_FILL); cyan is deepened from the chart's
-// #00FFFF so a small swatch stays visible on white
+// Same fills as the chart (StockDetailModal DC_FILL)
 export const CANDLE_FILL: Record<CandleColor, string> = {
   RED: "#FF4444",
   YELLOW: "#FFD700",
