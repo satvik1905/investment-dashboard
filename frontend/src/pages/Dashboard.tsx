@@ -164,7 +164,7 @@ export function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      <div className="p-6 max-w-screen-xl mx-auto space-y-8">
+      <div className="p-4 md:p-6 max-w-screen-xl mx-auto space-y-6 md:space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div>

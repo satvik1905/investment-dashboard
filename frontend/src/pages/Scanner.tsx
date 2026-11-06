@@ -794,7 +794,7 @@ export function Scanner() {
               No {activeTab.label.toLowerCase()} flips match the current filter.
             </div>
           ) : (
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppStore } from "./store/appStore";
-import { Sidebar } from "./components/Sidebar";
+import { Sidebar, BottomNav } from "./components/Sidebar";
 import { Dashboard } from "./pages/Dashboard";
 import { Scanner } from "./pages/Scanner";
 import { News } from "./pages/News";
@@ -150,11 +150,13 @@ export default function App() {
     <TooltipProvider>
       <div className="flex min-h-screen bg-background font-sans">
         <Sidebar />
-        <main className="flex-1 min-w-0 overflow-y-auto">
+        {/* Bottom padding keeps content clear of the phone tab bar */}
+        <main className="flex-1 min-w-0 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
           {activeTab === "dashboard" && <Dashboard />}
           {activeTab === "news" && <News />}
           {activeTab === "scanner" && <Scanner />}
         </main>
+        <BottomNav />
       </div>
     </TooltipProvider>
   );

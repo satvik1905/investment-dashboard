@@ -44,7 +44,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`${collapsed ? "w-14" : "w-[220px]"} bg-card border-r border-border flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200`}
+      className={`${collapsed ? "w-14" : "w-[220px]"} hidden md:flex bg-card border-r border-border flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200`}
     >
       {/* Logo */}
       <div className="px-4 py-5 border-b border-border">
@@ -156,5 +156,37 @@ export function Sidebar() {
 
       </TooltipProvider>
     </aside>
+  );
+}
+
+/** Phone navigation: the same three destinations as the sidebar, within thumb reach. */
+export function BottomNav() {
+  const { activeTab, setActiveTab } = useAppStore();
+
+  return (
+    <nav
+      aria-label="Main"
+      className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-card/95 backdrop-blur border-t border-border pb-[env(safe-area-inset-bottom)]"
+    >
+      <div className="grid grid-cols-3">
+        {NAV_ITEMS.map((item) => {
+          const active = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveTab(item.id)}
+              aria-current={active ? "page" : undefined}
+              className={`flex flex-col items-center justify-center gap-1 h-14 text-[11px] font-medium cursor-pointer transition-colors ${
+                active ? "text-primary" : "text-muted-foreground active:text-foreground"
+              }`}
+            >
+              <span className="[&_svg]:w-5 [&_svg]:h-5">{item.icon}</span>
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

@@ -141,7 +141,9 @@ export function StockDetailModal({ ticker, onClose }: Props) {
       setState("error");
     }
   };
-  const [onboardingStep, setOnboardingStep] = useState(() => localStorage.getItem("chart-onboarding-seen") ? 0 : 1);
+  // The tour spotlights the SMA legend, which is only shown at lg+, so it doesn't auto-start on phones
+  const [onboardingStep, setOnboardingStep] = useState(() =>
+    localStorage.getItem("chart-onboarding-seen") || window.innerWidth < 1024 ? 0 : 1);
   const smaLegendRef = useRef<HTMLDivElement>(null);
 
   // ── Signal refresh on mount ─────────────────────────────────────────────
@@ -421,17 +423,17 @@ export function StockDetailModal({ ticker, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.10] bg-card shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 sm:px-5 py-3 border-b border-black/[0.10] bg-card shrink-0">
 
         {/* Left: close + ticker + price + signal badge */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Button variant="ghost" size="icon-xs" onClick={handleClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">
             ✕
           </Button>
           <div className="flex items-baseline gap-2.5">
             <span className="font-mono text-xl font-semibold text-foreground">{ticker}</span>
             {liveQuote?.company_name && (
-              <span className="text-sm text-muted-foreground truncate max-w-[200px]">{liveQuote.company_name}</span>
+              <span className="hidden sm:inline text-sm text-muted-foreground truncate max-w-[200px]">{liveQuote.company_name}</span>
             )}
             {currentPrice != null && (
               <span className="font-mono text-base text-muted-foreground">${currentPrice.toFixed(2)}</span>
@@ -488,7 +490,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
       {/* Data quality warning */}
       {(signal?.raw_indicators?.data_warning || liveQuote?.data_warning) && (
-        <Alert className="mx-5 mt-3 rounded-lg bg-status-after/10 border-status-after/25 text-status-after">
+        <Alert className="mx-3 sm:mx-5 mt-3 w-auto rounded-lg bg-status-after/10 border-status-after/25 text-status-after">
           <AlertDescription className="text-xs leading-relaxed">
             <span className="font-semibold">⚠ This ticker's data may be stale or incorrect:</span>{" "}
             {((liveQuote?.data_warning ?? signal?.raw_indicators?.data_warning) as string[]).join(" · ")}
@@ -496,11 +498,11 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         </Alert>
       )}
 
-      {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div className="flex flex-1 min-h-0">
+      {/* ── Body: chart beside the panel on desktop, stacked and scrolling on phones ── */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
 
         {/* Charts column */}
-        <div ref={chartsRef} className="flex-1 flex flex-col min-w-0 relative">
+        <div ref={chartsRef} className="h-[62vh] min-h-[380px] shrink-0 lg:h-auto lg:min-h-0 lg:shrink lg:flex-1 flex flex-col min-w-0 relative">
 
           {/* Loading overlay */}
           {isFetching && (
@@ -755,7 +757,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         </div>
 
         {/* ── Signal panel ─────────────────────────────────────────────────── */}
-        <div className="w-80 border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
+        <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border bg-card flex flex-col lg:overflow-y-auto shrink-0">
           {signalLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
               <div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
