@@ -296,20 +296,16 @@ def generate_key_reason(signal: str, ind: dict, danny: dict) -> str:
         return f"Downtrend continues, {seq_len} cyan candle(s), awaiting reversal"[:80]
 
 
-def generate_risk_factors(signal: str, ind: dict, danny: dict,
-                          entry_price: float | None,
-                          target: float | None,
-                          stop: float | None) -> list[str]:
+def generate_risk_factors(signal: str, ind: dict, danny: dict) -> list[str]:
     """
     Conditional risk flags from indicator thresholds.
     Returns up to 4 items sorted by severity (most concerning first).
     Empty list if nothing is flagged.
 
     Severity tiers (internal, for sorting only):
-      1 = structural (no exit levels, below SMA 200)
+      1 = structural (below SMA 200)
       2 = momentum divergence (RSI extremes counter to signal, MACD against)
       3 = volume / volatility concerns
-      4 = target proximity
     """
     _risks: list[tuple[int, str]] = []  # (severity, message)
 
@@ -317,14 +313,6 @@ def generate_risk_factors(signal: str, ind: dict, danny: dict,
     vr = ind.get("volume_ratio")
     atr = ind.get("atr_14")
     price = ind.get("current_price") or 0
-
-    # Structural: no exit levels
-    if target is None and stop is None:
-        _risks.append((1, "No clear exit levels (target and stop undefined)"))
-    elif target is None:
-        _risks.append((1, "No target price — resistance not identified"))
-    elif stop is None:
-        _risks.append((1, "No stop loss — support not identified"))
 
     # RSI extremes — symmetric, flagged regardless of signal type
     if rsi is not None:
@@ -362,28 +350,19 @@ def generate_risk_factors(signal: str, ind: dict, danny: dict,
         if atr_pct > 3:
             _risks.append((3, f"High volatility — ATR {atr_pct:.1f}% of price"))
 
-    # Target proximity (only meaningful for BUY/SELL with both levels)
-    if target and entry_price and entry_price > 0:
-        target_pct = abs(target - entry_price) / entry_price * 100
-        if target_pct < 3:
-            _risks.append((4, f"Target only {target_pct:.1f}% from entry"))
-
     # Sort by severity, cap at 4
     _risks.sort(key=lambda x: x[0])
     return [msg for _, msg in _risks[:4]]
 
 
 def generate_summary(signal: str, ind: dict, danny: dict,
-                     entry_low: float | None, entry_high: float | None,
-                     target: float | None, stop: float | None,
                      confidence: int,
                      risk_factors: list[str]) -> str:
     """
-    3-sentence narrative from templates. No LLM — pure string formatting.
+    2-sentence narrative from templates. No LLM — pure string formatting.
 
     Sentence 1: signal + confidence + trigger (from Danny Cheng state)
-    Sentence 2: key levels + risk/reward ratio (or note if levels missing)
-    Sentence 3: strongest risk factor if any, else strongest confirming indicator
+    Sentence 2: strongest risk factor if any, else strongest confirming indicator
     """
     color = danny.get("current_color", "BLUE")
     trend = danny.get("current_trend", "UPTREND")
@@ -406,23 +385,9 @@ def generate_summary(signal: str, ind: dict, danny: dict,
         count = sum(1 for c in reversed(seq) if c.lower() == cont_color)
         s1 = f"HOLD at {confidence}% confidence — {direction} intact with {count} consecutive {cont_color} candle(s)."
 
-    # ── Sentence 2: key levels + risk/reward ───────────────────────────────
-    if entry_low and entry_high and target and stop:
-        entry_mid = (entry_low + entry_high) / 2
-        risk_amt = abs(entry_mid - stop)
-        reward_amt = abs(target - entry_mid)
-        rr = reward_amt / risk_amt if risk_amt > 0 else 0
-        s2 = (f"Entry ${entry_low:.2f}–${entry_high:.2f}, "
-              f"target ${target:.2f}, stop ${stop:.2f} — "
-              f"{rr:.1f}:1 risk/reward.")
-    elif entry_low and entry_high:
-        s2 = f"Entry ${entry_low:.2f}–${entry_high:.2f}, exit levels not fully defined."
-    else:
-        s2 = "No actionable entry or exit levels at this time."
-
-    # ── Sentence 3: top risk factor, or strongest confirming indicator ─────
+    # ── Sentence 2: top risk factor, or strongest confirming indicator ─────
     if risk_factors:
-        s3 = f"Watch: {risk_factors[0]}."
+        s2 = f"Watch: {risk_factors[0]}."
     else:
         # Build a confirming statement from the strongest positive signal
         confirms = []
@@ -438,11 +403,11 @@ def generate_summary(signal: str, ind: dict, danny: dict,
             confirms.append(f"volume confirms at {vr:.1f}× avg")
         if ind.get("above_sma200"):
             confirms.append("price above all major SMAs")
-        s3 = f"{' and '.join(confirms[:2])}." if confirms else "No significant risk factors identified."
+        s2 = f"{' and '.join(confirms[:2])}." if confirms else "No significant risk factors identified."
         # Capitalize first letter
-        s3 = s3[0].upper() + s3[1:]
+        s2 = s2[0].upper() + s2[1:]
 
-    return f"{s1} {s2} {s3}"
+    return f"{s1} {s2}"
 
 
 def _round_floats(d: dict) -> dict:

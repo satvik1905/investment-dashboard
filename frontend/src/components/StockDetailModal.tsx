@@ -278,10 +278,6 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
       if (data.support)    pl(data.support,    "#22c55e", "Support",    LineStyle.Dashed);
       if (data.resistance) pl(data.resistance, "#ef4444", "Resistance", LineStyle.Dashed);
-      if (signal?.entry_zone_low)  pl(parseFloat(signal.entry_zone_low),  "#f59e0b", "Entry ↓", LineStyle.Dotted);
-      if (signal?.entry_zone_high) pl(parseFloat(signal.entry_zone_high), "#f59e0b", "Entry ↑", LineStyle.Dotted);
-      if (signal?.target_price)    pl(parseFloat(signal.target_price),    "#22c55e", "Target",  LineStyle.Dotted);
-      if (signal?.stop_loss)       pl(parseFloat(signal.stop_loss),       "#ef4444", "Stop",    LineStyle.Dotted);
     }
 
     // ── Volume ───────────────────────────────────────────────────────────────
@@ -401,7 +397,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
     if (chartsRef.current) ro.observe(chartsRef.current);
 
     return () => { ro.disconnect(); main.remove(); vol.remove(); rsi.remove(); };
-  }, [data, signal, timeframe]);
+  }, [data, timeframe]);
 
   // ── Live price ──────────────────────────────────────────────────────────────
   const { quotes } = useLiveQuotes([ticker]);
@@ -559,9 +555,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 body: (
                   <div className="space-y-2">
                     {([
-                      { color: "#22c55e", style: "dashed", label: "Support / Target", desc: "Price floor & profit-taking level" },
-                      { color: "#ef4444", style: "dashed", label: "Resistance / Stop", desc: "Price ceiling & risk limit" },
-                      { color: "#f59e0b", style: "dotted", label: "Entry Zone", desc: "Range to enter the trade" },
+                      { color: "#22c55e", style: "dashed", label: "Support", desc: "Lowest low of the last 20 bars" },
+                      { color: "#ef4444", style: "dashed", label: "Resistance", desc: "Highest high of the last 20 bars" },
                     ] as const).map((l) => (
                       <div key={l.label} className="flex items-center gap-2.5">
                         <span className="w-6 shrink-0" style={{ borderBottom: `2px ${l.style} ${l.color}` }} />
@@ -805,41 +800,6 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 )}
               </div>
 
-              {/* 2. Exit levels */}
-              <div className="border-t border-border mt-4 pt-4">
-                <div className="text-sm text-muted-foreground mb-2">Levels</div>
-                {signal.entry_zone_low || signal.target_price || signal.stop_loss ? (
-                  <div className="space-y-1.5">
-                    {signal.entry_zone_low && signal.entry_zone_high && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Entry</span>
-                        <span className="font-mono tabular-nums text-foreground">
-                          ${parseFloat(signal.entry_zone_low).toFixed(2)}–${parseFloat(signal.entry_zone_high).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                    {signal.target_price && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Target</span>
-                        <span className="font-mono tabular-nums text-price-target">${parseFloat(signal.target_price).toFixed(2)}</span>
-                      </div>
-                    )}
-                    {signal.stop_loss && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Stop</span>
-                        <span className="font-mono tabular-nums text-price-stop">${parseFloat(signal.stop_loss).toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm text-foreground">No entry, target, or stop defined</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Signal is HOLD — no actionable trade setup at this time.
-                    </p>
-                  </div>
-                )}
-              </div>
 
               {/* 3. Confidence */}
               <div className="border-t border-border mt-4 pt-4">

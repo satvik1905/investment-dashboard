@@ -13,10 +13,6 @@ class SignalBase(BaseModel):
     price_direction_3d: Optional[str] = None
     price_direction_7d: Optional[str] = None
     price_direction_14d: Optional[str] = None
-    entry_zone_low: Optional[Decimal] = None
-    entry_zone_high: Optional[Decimal] = None
-    target_price: Optional[Decimal] = None
-    stop_loss: Optional[Decimal] = None
     key_reason: Optional[str] = None
     risk_factors: Optional[List[str]] = None
     summary: Optional[str] = None

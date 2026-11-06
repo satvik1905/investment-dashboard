@@ -9,10 +9,6 @@ export interface Signal {
   price_direction_3d: string | null;
   price_direction_7d: string | null;
   price_direction_14d: string | null;
-  entry_zone_low: string | null;
-  entry_zone_high: string | null;
-  target_price: string | null;
-  stop_loss: string | null;
   key_reason: string | null;
   risk_factors: string[] | null;
   summary: string | null;

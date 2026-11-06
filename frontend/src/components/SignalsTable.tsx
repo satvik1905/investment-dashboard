@@ -41,10 +41,6 @@ type SortKey =
   | "price"
   | "change"
   | "confidence"
-  | "entry"
-  | "target"
-  | "stop"
-  | "rr"
   | "reason";
 
 type SortDir = "asc" | "desc";
@@ -85,24 +81,6 @@ const SIGNAL_LABEL: Record<string, string> = {
 
 function isActionable(sig: string): boolean {
   return sig !== "HOLD";
-}
-
-function parseNum(v: string | null | undefined): number | null {
-  if (v == null) return null;
-  const n = parseFloat(String(v));
-  return isNaN(n) ? null : n;
-}
-
-function computeRR(signal: Signal): number | null {
-  const entryLow = parseNum(signal.entry_zone_low);
-  const entryHigh = parseNum(signal.entry_zone_high);
-  const target = parseNum(signal.target_price);
-  const stop = parseNum(signal.stop_loss);
-  if (entryLow == null || entryHigh == null || target == null || stop == null) return null;
-  const mid = (entryLow + entryHigh) / 2;
-  const risk = mid - stop;
-  if (risk <= 0) return null;
-  return (target - mid) / risk;
 }
 
 // ── Sort arrow ───────────────────────────────────────────────────────────────
@@ -180,11 +158,6 @@ function SignalRow({
   const changePct = quote?.change_pct ?? null;
   const pulsing = usePricePulse(livePrice);
 
-  const entryLow = parseNum(signal.entry_zone_low);
-  const entryHigh = parseNum(signal.entry_zone_high);
-  const target = parseNum(signal.target_price);
-  const stop = parseNum(signal.stop_loss);
-
   const badgeVariant = SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold";
   const badgeLabel = SIGNAL_LABEL[signal.signal] ?? "HOLD";
 
@@ -240,25 +213,6 @@ function SignalRow({
         {/* Confidence */}
         <TableCell className="py-2.5 px-3">
           <ConfidenceCell value={signal.confidence} variant={confVariant} />
-        </TableCell>
-
-        {/* Entry */}
-        <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-foreground whitespace-nowrap">
-          {entryLow !== null && entryHigh !== null
-            ? `$${entryLow.toFixed(2)}–${entryHigh.toFixed(2)}`
-            : entryLow !== null
-              ? `$${entryLow.toFixed(2)}`
-              : "—"}
-        </TableCell>
-
-        {/* Target */}
-        <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-price-target whitespace-nowrap">
-          {target !== null ? `$${target.toFixed(2)}` : "—"}
-        </TableCell>
-
-        {/* Stop */}
-        <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right text-price-stop whitespace-nowrap">
-          {stop !== null ? `$${stop.toFixed(2)}` : "—"}
         </TableCell>
 
         {/* Key reason */}
@@ -376,10 +330,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
           case "price":     cmp = (qA?.current_price ?? 0) - (qB?.current_price ?? 0); break;
           case "change":    cmp = (qA?.change_pct ?? 0) - (qB?.change_pct ?? 0); break;
           case "confidence":cmp = (a.confidence ?? 0) - (b.confidence ?? 0); break;
-          case "entry":     cmp = (parseNum(a.entry_zone_low) ?? 0) - (parseNum(b.entry_zone_low) ?? 0); break;
-          case "target":    cmp = (parseNum(a.target_price) ?? 0) - (parseNum(b.target_price) ?? 0); break;
-          case "stop":      cmp = (parseNum(a.stop_loss) ?? 0) - (parseNum(b.stop_loss) ?? 0); break;
-          case "rr":        cmp = (computeRR(a) ?? 0) - (computeRR(b) ?? 0); break;
           case "reason":    cmp = (a.key_reason ?? "").localeCompare(b.key_reason ?? ""); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
@@ -402,9 +352,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
     { key: "price",      label: "Price",     align: "text-right" },
     { key: "change",     label: "Change %",  align: "text-right" },
     { key: "confidence", label: "Conf" },
-    { key: "entry",      label: "Entry",     align: "text-right" },
-    { key: "target",     label: "Target",    align: "text-right" },
-    { key: "stop",       label: "Stop",      align: "text-right" },
     { key: "reason",     label: "Key Signal" },
   ];
 

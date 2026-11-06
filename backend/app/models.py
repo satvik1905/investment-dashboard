@@ -13,10 +13,6 @@ class Signal(Base):
     price_direction_3d = Column(String(10))   # UP, DOWN, NEUTRAL
     price_direction_7d = Column(String(10))
     price_direction_14d = Column(String(10))
-    entry_zone_low = Column(Numeric(10, 2))
-    entry_zone_high = Column(Numeric(10, 2))
-    target_price = Column(Numeric(10, 2))
-    stop_loss = Column(Numeric(10, 2))
     key_reason = Column(Text)
     risk_factors = Column(JSON)   # array of strings
     summary = Column(Text)        # plain English explanation

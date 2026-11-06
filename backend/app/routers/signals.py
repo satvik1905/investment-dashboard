@@ -43,9 +43,6 @@ def _generate_signal_math(df, ind: dict, danny: dict) -> dict:
     Pure math signal generation.
 
     Signal:     Danny Cheng candle color → BUY / SELL / HOLD
-    Entry:      ±2% band around current price (or None for HOLD)
-    Target:     Nearest resistance (BUY) or support (SELL)
-    Stop:       Support − 0.5×ATR (BUY) or resistance + 0.5×ATR (SELL)
     Directions: Rolling momentum at 3 / 7 / 14 trading-day lookbacks
     """
     close = df["close"]
@@ -62,43 +59,6 @@ def _generate_signal_math(df, ind: dict, danny: dict) -> dict:
     else:  # BLUE (uptrend) or CYAN (downtrend) → HOLD
         signal = "HOLD"
 
-    # ── Entry zone ──────────────────────────────────────────────────────────
-    if signal == "BUY":
-        entry_low  = round(current_price * 0.98, 2)
-        entry_high = round(current_price * 1.00, 2)
-    elif signal == "SELL":
-        entry_low  = round(current_price * 1.00, 2)
-        entry_high = round(current_price * 1.02, 2)
-    else:
-        entry_low = entry_high = None
-
-    # ── Target ──────────────────────────────────────────────────────────────
-    resistance = ind.get("resistance")
-    support    = ind.get("support")
-    atr = ind.get("atr_14")
-
-    if signal == "BUY" and resistance and float(resistance) > current_price:
-        candidate = round(float(resistance), 2)
-        entry_mid = current_price * 0.99  # midpoint of the ±2% entry band
-        reward = candidate - entry_mid
-        # Suppress target if reward < 1×ATR (within daily noise)
-        target = candidate if (not atr or reward >= float(atr)) else None
-    elif signal == "SELL" and support and float(support) < current_price:
-        candidate = round(float(support), 2)
-        entry_mid = current_price * 1.01
-        reward = entry_mid - candidate
-        target = candidate if (not atr or reward >= float(atr)) else None
-    else:
-        target = None
-
-    # ── Stop loss ───────────────────────────────────────────────────────────
-    if signal == "BUY" and support and atr:
-        stop = round(float(support) - 0.5 * float(atr), 2)
-    elif signal == "SELL" and resistance and atr:
-        stop = round(float(resistance) + 0.5 * float(atr), 2)
-    else:
-        stop = None
-
     # ── 3 / 7 / 14-day momentum directions ─────────────────────────────────
     dir_3d  = _momentum_dir(close,  3, 0.5)
     dir_7d  = _momentum_dir(close,  7, 1.0)
@@ -106,11 +66,8 @@ def _generate_signal_math(df, ind: dict, danny: dict) -> dict:
 
     confidence = compute_confidence(signal, ind, danny)
     key_reason = generate_key_reason(signal, ind, danny)
-    risk_factors = generate_risk_factors(signal, ind, danny, current_price, target, stop)
-    summary = generate_summary(
-        signal, ind, danny, entry_low, entry_high, target, stop,
-        confidence, risk_factors,
-    )
+    risk_factors = generate_risk_factors(signal, ind, danny)
+    summary = generate_summary(signal, ind, danny, confidence, risk_factors)
 
     return {
         "signal":              signal,
@@ -118,10 +75,6 @@ def _generate_signal_math(df, ind: dict, danny: dict) -> dict:
         "price_direction_3d":  dir_3d,
         "price_direction_7d":  dir_7d,
         "price_direction_14d": dir_14d,
-        "entry_zone_low":      entry_low,
-        "entry_zone_high":     entry_high,
-        "target_price":        target,
-        "stop_loss":           stop,
         "key_reason":          key_reason,
         "risk_factors":        risk_factors,
         "summary":             summary,
