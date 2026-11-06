@@ -12,6 +12,7 @@ import { useLiveQuotes } from "../hooks/useLivePrice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ErrorState, describeError } from "./ErrorState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -99,16 +100,47 @@ function getInitialTimeframe(): Timeframe {
   return new URLSearchParams(window.location.search).get("tf") === "W" ? "W" : "D";
 }
 
+type AiState = "idle" | "loading" | "done" | "error";
+
+function AiUnavailable({ label, reason }: { label: string; reason: string | null }) {
+  return (
+    <div className="border border-destructive/25 bg-destructive/5 rounded-lg p-3 mb-2">
+      <div className="text-xs font-semibold text-destructive mb-0.5">{label} unavailable</div>
+      <p className="text-xs text-muted-foreground leading-relaxed">{reason}</p>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function StockDetailModal({ ticker, onClose }: Props) {
   const [timeframe, setTimeframe] = useState<Timeframe>(getInitialTimeframe);
-  const [contextState, setContextState] = useState<"idle" | "loading" | "done">("idle");
+  // In the "error" state the paired text holds the failure reason instead of the AI output
+  const [contextState, setContextState] = useState<AiState>("idle");
   const [contextText, setContextText] = useState<string | null>(null);
-  const [chartAnalysisState, setChartAnalysisState] = useState<"idle" | "loading" | "done">("idle");
+  const [chartAnalysisState, setChartAnalysisState] = useState<AiState>("idle");
   const [chartAnalysisText, setChartAnalysisText] = useState<string | null>(null);
-  const [setupReviewState, setSetupReviewState] = useState<"idle" | "loading" | "done">("idle");
+  const [setupReviewState, setSetupReviewState] = useState<AiState>("idle");
   const [setupReviewText, setSetupReviewText] = useState<string | null>(null);
+
+  const runAi = async (
+    path: string,
+    field: string,
+    setState: (s: AiState) => void,
+    setText: (t: string | null) => void,
+  ) => {
+    setState("loading");
+    try {
+      const res = await api.post(path);
+      const text: string | null = res.data[field] ?? null;
+      // The backend returns null when it can't run Claude (e.g. CLI missing on the server)
+      setText(text ?? "Claude isn't available on the server right now.");
+      setState(text ? "done" : "error");
+    } catch (err) {
+      setText(describeError(err));
+      setState("error");
+    }
+  };
   const [onboardingStep, setOnboardingStep] = useState(() => localStorage.getItem("chart-onboarding-seen") ? 0 : 1);
   const smaLegendRef = useRef<HTMLDivElement>(null);
 
@@ -151,7 +183,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
 
   const { period, interval } = TF_CONFIG[timeframe];
 
-  const { data, isFetching } = useQuery<ChartData>({
+  const { data, isFetching, isError, error: chartError, refetch: refetchChart } = useQuery<ChartData>({
     queryKey: ["chart-detail", ticker, timeframe],
     queryFn: async () => {
       const res = await api.get(`/api/stocks/${ticker}/chart?period=${period}&interval=${interval}`);
@@ -684,8 +716,19 @@ export function StockDetailModal({ ticker, onClose }: Props) {
           })()}
 
           {!data?.candles?.length && !isFetching ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <div className="w-8 h-8 border-2 border-ring/30 border-t-ring rounded-full animate-spin" />
+            <div className="flex-1 flex items-center justify-center p-8">
+              {isError ? (
+                <ErrorState
+                  className="w-full max-w-md"
+                  title={`Couldn't load the ${TF_CONFIG[timeframe].label.toLowerCase()} chart for ${ticker}`}
+                  error={chartError}
+                  onRetry={() => refetchChart()}
+                />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No {TF_CONFIG[timeframe].label.toLowerCase()} price data for {ticker}.
+                </p>
+              )}
             </div>
           ) : (
             <>
@@ -853,19 +896,15 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               {/* 6. Actions */}
               <div className="border-t border-border mt-4 pt-4 space-y-2">
                 {/* Primary action */}
-                {contextState === "idle" && (
+                {contextState === "error" && (
+                  <AiUnavailable label="Context read" reason={contextText} />
+                )}
+                {(contextState === "idle" || contextState === "error") && (
                   <Button
-                    onClick={async () => {
-                      setContextState("loading");
-                      try {
-                        const res = await api.post(`/api/stocks/${ticker}/context`);
-                        setContextText(res.data.context ?? null);
-                      } catch { setContextText(null); }
-                      setContextState("done");
-                    }}
+                    onClick={() => runAi(`/api/stocks/${ticker}/context`, "context", setContextState, setContextText)}
                     className="w-full rounded-full"
                   >
-                    Get context read
+                    {contextState === "error" ? "Try again" : "Get context read"}
                   </Button>
                 )}
                 {contextState === "loading" && (
@@ -887,14 +926,7 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     variant="outline"
                     className="flex-1 text-xs"
                     disabled={chartAnalysisState === "loading"}
-                    onClick={async () => {
-                      setChartAnalysisState("loading");
-                      try {
-                        const res = await api.post(`/api/stocks/${ticker}/chart-analysis`);
-                        setChartAnalysisText(res.data.analysis ?? null);
-                      } catch { setChartAnalysisText(null); }
-                      setChartAnalysisState("done");
-                    }}
+                    onClick={() => runAi(`/api/stocks/${ticker}/chart-analysis`, "analysis", setChartAnalysisState, setChartAnalysisText)}
                   >
                     {chartAnalysisState === "loading" ? "Analyzing…" : "Analyze charts"}
                   </Button>
@@ -902,20 +934,19 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     variant="outline"
                     className="flex-1 text-xs"
                     disabled={setupReviewState === "loading"}
-                    onClick={async () => {
-                      setSetupReviewState("loading");
-                      try {
-                        const res = await api.post(`/api/stocks/${ticker}/setup-review`);
-                        setSetupReviewText(res.data.review ?? null);
-                      } catch { setSetupReviewText(null); }
-                      setSetupReviewState("done");
-                    }}
+                    onClick={() => runAi(`/api/stocks/${ticker}/setup-review`, "review", setSetupReviewState, setSetupReviewText)}
                   >
                     {setupReviewState === "loading" ? "Reviewing…" : "Setup review"}
                   </Button>
                 </div>
 
                 {/* Results */}
+                {chartAnalysisState === "error" && (
+                  <AiUnavailable label="Chart analysis" reason={chartAnalysisText} />
+                )}
+                {setupReviewState === "error" && (
+                  <AiUnavailable label="Setup review" reason={setupReviewText} />
+                )}
                 {chartAnalysisState === "done" && chartAnalysisText && (
                   <div className="border border-border rounded-lg p-3">
                     <div className="text-sm text-muted-foreground mb-1">Chart analysis</div>

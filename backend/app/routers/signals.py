@@ -179,11 +179,11 @@ def generate_signal(ticker: str, db: Session = Depends(get_db)):
         )
 
     try:
-        # Use 6mo to match the daily chart's period — Danny Cheng is path-dependent
-        # and needs enough history to reach the same state as what the chart shows.
-        df    = market_data.get_ohlcv(ticker, period="6mo")
+        # Danny Cheng is path-dependent — run it on the shared lookback so the
+        # signal matches what the chart shows.
+        df, danny_df = market_data.get_ohlcv_with_danny_history(ticker, "6mo")
         ind   = indicators.compute_all(df)
-        danny = indicators.compute_danny_cheng(df)
+        danny = indicators.compute_danny_cheng(danny_df)
 
         # Attach Danny Cheng fields to raw_indicators for chart use
         ind["danny_current_color"]        = danny["current_color"]
@@ -257,9 +257,9 @@ def refresh_signal(ticker: str, db: Session = Depends(get_db)):
 
     # ── Validation passed — generate fresh ────────────────────────────────
     try:
-        df    = market_data.get_ohlcv(ticker, period="6mo")
+        df, danny_df = market_data.get_ohlcv_with_danny_history(ticker, "6mo")
         ind   = indicators.compute_all(df)
-        danny = indicators.compute_danny_cheng(df)
+        danny = indicators.compute_danny_cheng(danny_df)
 
         ind["danny_current_color"]        = danny["current_color"]
         ind["danny_trend_sequence"]       = danny["trend_sequence"]

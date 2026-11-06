@@ -59,7 +59,7 @@ def get_chart_data(
     """
     try:
         ticker = ticker.upper()
-        df = market_data.get_ohlcv(ticker, period=period, interval=interval)
+        df, danny_df = market_data.get_ohlcv_with_danny_history(ticker, period, interval)
         close = df["close"]
 
         # ── Candles ────────────────────────────────────────────────────────
@@ -117,7 +117,11 @@ def get_chart_data(
         # ── Support / Resistance ────────────────────────────────────────────
         scalars = ind_service.compute_all(df)
 
-        danny = ind_service.compute_danny_cheng(df)
+        # Run on the longer shared history, then keep only the displayed candles
+        danny = ind_service.compute_danny_cheng(danny_df)
+        shown = set(dates)
+        danny["color_series"] = [c for c in danny["color_series"] if c["time"] in shown]
+        danny["vol_holes"]    = [d for d in danny["vol_holes"] if d in shown]
 
         return {
             "candles":               candles,
@@ -241,10 +245,10 @@ async def get_context_read(ticker: str, db: Session = Depends(get_db)):
 def _danny_for_timeframe(ticker: str, period: str, interval: str) -> dict | None:
     """Fetch OHLCV and run Danny Cheng for one timeframe. Returns None on failure."""
     try:
-        df = market_data.get_ohlcv(ticker, period=period, interval=interval)
-        if len(df) < 30:
+        _, danny_df = market_data.get_ohlcv_with_danny_history(ticker, period, interval)
+        if len(danny_df) < 30:
             return None
-        danny = ind_service.compute_danny_cheng(df)
+        danny = ind_service.compute_danny_cheng(danny_df)
         return {
             "color": danny["current_color"],
             "trend": danny["current_trend"],
@@ -521,10 +525,10 @@ async def get_setup_review(ticker: str, db: Session = Depends(get_db)):
 def _danny_daily_plus_indicators(ticker: str) -> tuple[dict | None, dict | None]:
     """Fetch daily OHLCV once, run both Danny Cheng and compute_all."""
     try:
-        df = market_data.get_ohlcv(ticker, period="6mo", interval="1d")
+        df, danny_df = market_data.get_ohlcv_with_danny_history(ticker, "6mo", "1d")
         if len(df) < 30:
             return None, None
-        danny = ind_service.compute_danny_cheng(df)
+        danny = ind_service.compute_danny_cheng(danny_df)
         ind = ind_service.compute_all(df)
         daily_d = {
             "color": danny["current_color"],

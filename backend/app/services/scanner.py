@@ -11,6 +11,8 @@ import ta.trend as ta_trend
 import ta.momentum as ta_momentum
 from ta.trend import MACD as TaMACD
 
+from .market_data import DANNY_LOOKBACK
+
 logger = logging.getLogger(__name__)
 
 # ── Ticker Universe ────────────────────────────────────────────────────────────
@@ -320,7 +322,7 @@ def run_full_scan(
 ) -> list[dict]:
     """
     Scan S&P 500 + NASDAQ 100 in batches of 50.
-    Downloads both weekly (1y/1wk) and monthly (5y/1mo) data per batch.
+    Downloads weekly and monthly data per batch (lengths from DANNY_LOOKBACK).
     Includes a stock if it has a weekly OR monthly EMA 13/34 crossover.
     update_progress(job_id, status, pct, scanned, total, message)
     """
@@ -350,7 +352,7 @@ def run_full_scan(
         try:
             weekly_raw = yf.download(
                 tickers=batch,
-                period="2y",
+                period=DANNY_LOOKBACK["1wk"],
                 interval="1wk",
                 group_by="ticker",
                 auto_adjust=True,
@@ -371,7 +373,7 @@ def run_full_scan(
         try:
             monthly_raw = yf.download(
                 tickers=batch,
-                period="5y",
+                period=DANNY_LOOKBACK["1mo"],
                 interval="1mo",
                 group_by="ticker",
                 auto_adjust=True,

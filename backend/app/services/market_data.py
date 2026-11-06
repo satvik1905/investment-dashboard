@@ -237,6 +237,33 @@ def get_ohlcv(ticker: str, period: str = "3mo", interval: str = "1d") -> pd.Data
     return df
 
 
+# Danny Cheng replays its trend state from the first bar it sees, so every caller
+# (chart, signals, scanner) must feed it the same history per interval — otherwise
+# they can disagree on the current color for the same ticker.
+DANNY_LOOKBACK = {"1d": "2y", "1wk": "2y", "1mo": "5y"}
+
+_PERIOD_MONTHS = {"1mo": 1, "3mo": 3, "6mo": 6, "1y": 12, "2y": 24, "5y": 60, "10y": 120}
+
+
+def get_ohlcv_with_danny_history(
+    ticker: str, period: str, interval: str = "1d"
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Returns (df, danny_df): df covers the requested period; danny_df covers at
+    least DANNY_LOOKBACK[interval] and is what compute_danny_cheng should run on.
+    One download — df is a tail slice of danny_df when the lookback is longer.
+    """
+    lookback = DANNY_LOOKBACK.get(interval)
+    want = _PERIOD_MONTHS.get(period)
+    if lookback is None or want is None or want >= _PERIOD_MONTHS[lookback]:
+        df = get_ohlcv(ticker, period=period, interval=interval)
+        return df, df
+
+    full = get_ohlcv(ticker, period=lookback, interval=interval)
+    cutoff = full.index[-1] - pd.DateOffset(months=want)
+    return full[full.index > cutoff], full
+
+
 def get_quote(ticker: str) -> dict:
     """
     Get current price, change %, and market status.

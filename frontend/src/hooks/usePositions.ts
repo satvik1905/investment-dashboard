@@ -42,7 +42,7 @@ export function useAddPosition() {
 export interface PositionAlert {
   position_id: number;
   ticker: string;
-  recommendation: "HOLD" | "EXIT";
+  recommendation: "HOLD" | "EXIT" | "UNKNOWN";
   urgency: "LOW" | "MEDIUM" | "HIGH";
   reason: string;
   current_price: number | null;

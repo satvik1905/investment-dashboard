@@ -451,19 +451,28 @@ def _round_floats(d: dict) -> dict:
 
 # ── Danny Cheng Candle Coloring ────────────────────────────────────────────────
 
+# MACD(12, 26, 9) histogram needs 26 + 9 - 1 bars before its first real value
+DC_WARMUP_BARS = 34
+
+
 def compute_danny_cheng(df: pd.DataFrame) -> dict:
     """
     Danny Cheng state-machine candle coloring.
 
     STATE MACHINE (not per-candle independent):
       UPTREND  → all candles BLUE
-        Bearish reversal: HA bearish + MACD hist crosses below 0 + RSI < 50
+        Bearish reversal: HA bearish + (MACD hist < 0 OR RSI < 50)
         → fires ONE YELLOW candle, switches to DOWNTREND
       DOWNTREND → all candles CYAN
-        Bullish reversal: HA bullish + MACD hist crosses above 0 + RSI > 50
+        Bullish reversal: HA bullish + (MACD hist > 0 OR RSI > 50)
         → fires ONE RED candle, switches to UPTREND
 
     RED always followed by BLUE. YELLOW always followed by CYAN.
+
+    Warm-up: for the first DC_WARMUP_BARS candles MACD/RSI aren't valid yet, so
+    the state just follows HA direction and no signal fires. This keeps the
+    state entering real bars independent of whichever bar happens to be first.
+    Callers should still pass a DANNY_LOOKBACK-length history (market_data).
 
     Volatility holes: RARE — ATR > 3× avg AND price gap ≥ 0.5% AND volume > 2.5× avg.
     """
@@ -504,7 +513,7 @@ def compute_danny_cheng(df: pd.DataFrame) -> dict:
     ]
 
     # ── State machine ─────────────────────────────────────────────────────────
-    state       = "UPTREND" if float(ha_close.iloc[0]) >= float(ha_open.iloc[0]) else "DOWNTREND"
+    state       = "UPTREND"
     colors: list[str] = []
     just_flipped = False   # blocks a second flip on the candle immediately after a signal
 
@@ -513,7 +522,10 @@ def compute_danny_cheng(df: pd.DataFrame) -> dict:
         hist_val = float(macd_hist.iloc[i])
         rsi_val  = float(rsi_series.iloc[i])
 
-        if just_flipped:
+        if i < DC_WARMUP_BARS:
+            state = "UPTREND" if ha_bull else "DOWNTREND"
+            colors.append("BLUE" if ha_bull else "CYAN")
+        elif just_flipped:
             # Candle immediately after a signal must be the continuation color
             colors.append("BLUE" if state == "UPTREND" else "CYAN")
             just_flipped = False

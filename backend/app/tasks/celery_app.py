@@ -16,7 +16,7 @@ celery_app.conf.beat_schedule = {
     # Weekly scanner — every Friday at 4:15 PM ET after market close
     "weekly-scanner": {
         "task": "app.tasks.scanner.run_weekly_scanner",
-        "schedule": crontab(hour=16, minute=15, day_of_week=4),  # Friday
+        "schedule": crontab(hour=16, minute=15, day_of_week="fri"),  # Celery counts Sunday as 0
     },
 }
 

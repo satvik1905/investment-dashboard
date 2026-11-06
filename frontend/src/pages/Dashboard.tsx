@@ -9,7 +9,9 @@ import { StockDetailModal } from "../components/StockDetailModal";
 import { useRemoveSignal, useGenerateSignal } from "../hooks/useSignals";
 import { TickerAutocomplete } from "../components/TickerAutocomplete";
 import { AlertBanner } from "../components/AlertBanner";
+import { ErrorState } from "../components/ErrorState";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -71,8 +73,10 @@ function SectionHeader({ title, count }: { title: string; count?: number }) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export function Dashboard() {
-  const { data: signals, isLoading: signalsLoading } = useSignals();
-  const { data: alerts } = usePositionAlerts();
+  const signalsQuery = useSignals();
+  const { data: signals, isLoading: signalsLoading } = signalsQuery;
+  const alertsQuery = usePositionAlerts();
+  const alerts = alertsQuery.data;
   const activeAlerts = alerts?.filter((a) => a.urgency !== "LOW") ?? [];
   const tickers = signals?.map((s) => s.ticker) ?? [];
   const { quotes, marketStatus } = useLiveQuotes(tickers);
@@ -181,7 +185,16 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Position alerts */}
+        {/* Position alerts — if this fails, stop/target alerts can't fire, so say so */}
+        {alertsQuery.isError && (
+          <ErrorState
+            compact
+            title="Can't check open positions — stop-loss and target alerts are paused"
+            error={alertsQuery.error}
+            onRetry={() => alertsQuery.refetch()}
+            retrying={alertsQuery.isFetching}
+          />
+        )}
         {activeAlerts.length > 0 && (
           <div className="space-y-2">
             {activeAlerts.map((alert) => (
@@ -190,6 +203,7 @@ export function Dashboard() {
                 ticker={alert.ticker}
                 reason={alert.reason}
                 urgency={alert.urgency}
+                recommendation={alert.recommendation}
               />
             ))}
           </div>
@@ -198,8 +212,25 @@ export function Dashboard() {
         {/* Signals */}
         <section>
           <SectionHeader title="Signals" count={signals?.length} />
+          {signalsQuery.isError && signals && (
+            <ErrorState
+              compact
+              className="mb-4"
+              title="Couldn't refresh signals — showing the last loaded data"
+              error={signalsQuery.error}
+              onRetry={() => signalsQuery.refetch()}
+              retrying={signalsQuery.isFetching}
+            />
+          )}
           {signalsLoading ? (
-            <div className="h-64 rounded-lg bg-muted animate-pulse" />
+            <Skeleton className="h-64 rounded-lg" />
+          ) : signalsQuery.isError && !signals ? (
+            <ErrorState
+              title="Couldn't load your signals"
+              error={signalsQuery.error}
+              onRetry={() => signalsQuery.refetch()}
+              retrying={signalsQuery.isFetching}
+            />
           ) : signals?.length ? (
             <SignalsTable
               signals={signals}

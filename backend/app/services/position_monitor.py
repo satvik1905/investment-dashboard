@@ -1,6 +1,9 @@
 """
 Position monitor — pure math, no AI calls.
 Checks stop-loss / target hit for each open position.
+
+Recommendations: EXIT (stop or target hit), HOLD, or UNKNOWN (no price, so
+stop/target can't be checked — surfaced to the user rather than shown as HOLD).
 """
 from sqlalchemy.orm import Session
 from datetime import date
@@ -12,7 +15,7 @@ from .market_data import get_quote
 def monitor_positions(db: Session) -> list[dict]:
     """
     Check all open positions against their stop-loss and target price.
-    Returns a list of simple HOLD/EXIT recommendations based on price alone.
+    Returns a list of simple HOLD/EXIT/UNKNOWN recommendations based on price alone.
     """
     open_positions = db.query(Position).filter(Position.status == "OPEN").all()
     results = []
@@ -20,7 +23,9 @@ def monitor_positions(db: Session) -> list[dict]:
     for pos in open_positions:
         try:
             quote = get_quote(pos.ticker)
-            current_price = float(quote.get("current_price") or 0.0)
+            if not quote.get("current_price"):
+                raise ValueError("no price returned")
+            current_price = float(quote["current_price"])
             entry_price   = float(pos.entry_price)
             stop_loss     = float(pos.stop_loss)   if pos.stop_loss   else None
             target_price  = float(pos.target_price) if pos.target_price else None
@@ -59,9 +64,9 @@ def monitor_positions(db: Session) -> list[dict]:
             results.append({
                 "position_id":    pos.id,
                 "ticker":         pos.ticker,
-                "recommendation": "HOLD",
-                "urgency":        "LOW",
-                "reason":         f"Could not fetch price: {e}",
+                "recommendation": "UNKNOWN",
+                "urgency":        "MEDIUM",
+                "reason":         f"Price unavailable — stop/target not checked ({e})",
                 "current_price":  None,
                 "pnl_pct":        None,
                 "hold_days":      None,

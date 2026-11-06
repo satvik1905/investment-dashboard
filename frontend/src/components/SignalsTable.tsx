@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "../api/client";
+import { describeError } from "./ErrorState";
 import type { Signal } from "../hooks/useSignals";
 import type { LiveQuote } from "../hooks/useLivePrice";
 import { cn } from "@/lib/utils";
@@ -193,7 +195,9 @@ function SignalRow({
     try {
       await api.post(`/api/signals/generate?ticker=${signal.ticker}`);
       qc.invalidateQueries({ queryKey: ["signals"] });
-    } catch { /* silent */ }
+    } catch (err) {
+      toast.error(`Couldn't refresh ${signal.ticker}`, { description: describeError(err) });
+    }
     finally { setRefreshing(false); }
   };
 

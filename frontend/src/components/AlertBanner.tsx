@@ -7,10 +7,11 @@ interface Props {
   ticker: string;
   reason: string;
   urgency: "LOW" | "MEDIUM" | "HIGH";
+  recommendation?: "HOLD" | "EXIT" | "UNKNOWN";
   onDismiss?: () => void;
 }
 
-export function AlertBanner({ ticker, reason, urgency, onDismiss }: Props) {
+export function AlertBanner({ ticker, reason, urgency, recommendation, onDismiss }: Props) {
   const config = {
     HIGH: {
       bg: "bg-destructive/10",
@@ -60,7 +61,7 @@ export function AlertBanner({ ticker, reason, urgency, onDismiss }: Props) {
               config.text,
             )}
           >
-            {config.label}
+            {recommendation === "UNKNOWN" ? "NO PRICE" : config.label}
           </Badge>
         </div>
         <p className="text-muted-foreground text-xs leading-relaxed">{reason}</p>

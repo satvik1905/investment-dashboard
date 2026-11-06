@@ -25,6 +25,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "../components/ErrorState";
 
 // ── Animation variants ────────────────────────────────────────────────────────
 
@@ -81,7 +83,7 @@ function VixCard() {
   const { data: vix, isLoading } = useVix(range);
 
   if (isLoading) {
-    return <div className="skeleton h-56 rounded-xl" />;
+    return <Skeleton className="h-56 rounded-xl" />;
   }
 
   if (!vix || vix.current == null) {
@@ -275,7 +277,8 @@ export function News() {
     return Array.from(set);
   }, [signals, positions]);
 
-  const { data: feedData, isLoading: feedLoading } = useNewsFeed(tickers);
+  const feedQuery = useNewsFeed(tickers);
+  const { data: feedData, isLoading: feedLoading } = feedQuery;
   const refresh = useNewsRefresh();
 
   const [filterTicker, setFilterTicker] = useState("all");
@@ -345,9 +348,16 @@ export function News() {
         {feedLoading ? (
           <div className="space-y-px">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="skeleton h-20 rounded-none first:rounded-t-[12px] last:rounded-b-[12px]" />
+              <Skeleton key={i} className="h-20 rounded-none first:rounded-t-[12px] last:rounded-b-[12px]" />
             ))}
           </div>
+        ) : feedQuery.isError && !feedData ? (
+          <ErrorState
+            title="Couldn't load news"
+            error={feedQuery.error}
+            onRetry={() => feedQuery.refetch()}
+            retrying={feedQuery.isFetching}
+          />
         ) : filtered.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center h-32 text-sm font-sans text-muted-foreground">

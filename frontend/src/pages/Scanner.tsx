@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "../components/ErrorState";
 import { Input } from "@/components/ui/input";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -62,13 +63,14 @@ function fmtPrice(n: number | null | undefined): string {
   return `$${n.toFixed(2)}`;
 }
 
-function formatDateTime(isoDate: string): string {
-  const d = new Date(isoDate);
-  return d.toLocaleDateString("en-US", {
+function formatScanDate(isoDate: string): string {
+  // scan_date is a plain date — parse as local so it doesn't shift a day back
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
-  }) + ", 4:15 PM EST";
+  });
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -304,16 +306,16 @@ export function Scanner() {
   })();
 
   // Latest scan date
-  const { data: latestDateData } = useQuery({
+  const latestDateQuery = useQuery({
     queryKey: ["scanner-latest-date"],
     queryFn: () => api.get("/api/scanner/latest-date").then((r) => r.data),
     staleTime: 60_000,
   });
-  const latestDate: string | null = latestDateData?.latest_date ?? null;
+  const latestDate: string | null = latestDateQuery.data?.latest_date ?? null;
 
   // Scan results
   const resolvedDate = scanDateOverride || latestDate || undefined;
-  const { data: redResults = [], isLoading: redLoading } = useQuery<ScannerResult[]>({
+  const { data: redResults = [], isLoading: redLoading, isError: redError, error: redErrorDetail } = useQuery<ScannerResult[]>({
     queryKey: ["scanner-results", "RED", resolvedDate, filterMode, sortMode],
     queryFn: () =>
       api
@@ -330,7 +332,7 @@ export function Scanner() {
     staleTime: 300_000,
   });
 
-  const { data: yellowResults = [], isLoading: yellowLoading } = useQuery<ScannerResult[]>({
+  const { data: yellowResults = [], isLoading: yellowLoading, isError: yellowError, error: yellowErrorDetail } = useQuery<ScannerResult[]>({
     queryKey: ["scanner-results", "YELLOW", resolvedDate, filterMode, sortMode],
     queryFn: () =>
       api
@@ -347,7 +349,7 @@ export function Scanner() {
     staleTime: 300_000,
   });
 
-  const { data: monthlyRedResults = [], isLoading: monthlyRedLoading } = useQuery<ScannerResult[]>({
+  const { data: monthlyRedResults = [], isLoading: monthlyRedLoading, isError: monthlyRedError, error: monthlyRedErrorDetail } = useQuery<ScannerResult[]>({
     queryKey: ["scanner-results", "MONTHLY_RED", resolvedDate],
     queryFn: () =>
       api
@@ -362,7 +364,7 @@ export function Scanner() {
     staleTime: 300_000,
   });
 
-  const { data: monthlyYellowResults = [], isLoading: monthlyYellowLoading } = useQuery<ScannerResult[]>({
+  const { data: monthlyYellowResults = [], isLoading: monthlyYellowLoading, isError: monthlyYellowError, error: monthlyYellowErrorDetail } = useQuery<ScannerResult[]>({
     queryKey: ["scanner-results", "MONTHLY_YELLOW", resolvedDate],
     queryFn: () =>
       api
@@ -378,13 +380,15 @@ export function Scanner() {
   });
 
   // Progress polling
-  const { data: progress } = useQuery<ScanProgress | null>({
+  const { data: progress, isError: progressError } = useQuery<ScanProgress | null>({
     queryKey: ["scanner-progress", jobId],
     queryFn: () =>
       jobId
         ? api.get(`/api/scanner/progress/${jobId}`).then((r) => r.data)
         : api.get("/api/scanner/progress").then((r) => r.data),
     refetchInterval: (query) => {
+      // On error React Query keeps the last data, which may still say "running"
+      if (query.state.status === "error") return false;
       const data = query.state.data;
       if (data?.status === "running") return 2000;
       return false;
@@ -442,7 +446,8 @@ export function Scanner() {
     generateSignalMutation.mutate(ticker);
   }
 
-  const isScanning = progress?.status === "running" || triggerMutation.isPending;
+  const isScanning =
+    (!progressError && progress?.status === "running") || triggerMutation.isPending;
 
   const activeResults =
     activeCandle === "RED" ? redResults :
@@ -461,6 +466,21 @@ export function Scanner() {
     monthlyRedResults.length > 0 || monthlyYellowResults.length > 0;
 
   const isMonthlyTab = activeCandle === "MONTHLY_RED" || activeCandle === "MONTHLY_YELLOW";
+
+  const resultsError =
+    latestDateQuery.error ?? redErrorDetail ?? yellowErrorDetail ??
+    monthlyRedErrorDetail ?? monthlyYellowErrorDetail ?? null;
+  const resultsFailed =
+    latestDateQuery.isError || redError || yellowError || monthlyRedError || monthlyYellowError;
+  const [retryingResults, setRetryingResults] = useState(false);
+  const retryResults = async () => {
+    setRetryingResults(true);
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: ["scanner-latest-date"] }),
+      queryClient.refetchQueries({ queryKey: ["scanner-results"] }),
+    ]);
+    setRetryingResults(false);
+  };
 
   const scanWasRun = !!latestDate || progress?.status === "complete";
 
@@ -485,7 +505,7 @@ export function Scanner() {
           <div className="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground">
             {latestDate && (
               <span>
-                Last scan: <span className="text-muted-foreground">{formatDateTime(latestDate)}</span>
+                Last scan: <span className="text-muted-foreground">{formatScanDate(latestDate)}</span>
               </span>
             )}
             {!isWeeklyCandleClosed && (
@@ -513,27 +533,57 @@ export function Scanner() {
         </div>
       )}
 
+      {/* Last scan failed */}
+      {!isScanning && progress?.status === "failed" && (
+        <ErrorState
+          compact
+          className="mb-6"
+          title={`Last scan failed — ${progress.message}`}
+          onRetry={handleRunScanner}
+        />
+      )}
+
+      {/* Results failed to load — don't pretend there are none */}
+      {!isScanning && resultsFailed && !hasResults && !isLoading && (
+        <ErrorState
+          className="mb-6"
+          title="Couldn't load scanner results"
+          error={resultsError}
+          onRetry={retryResults}
+          retrying={retryingResults}
+        />
+      )}
+      {!isScanning && resultsFailed && hasResults && (
+        <ErrorState
+          compact
+          className="mb-4"
+          title="Some scanner results didn't load — tab counts may be incomplete"
+          error={resultsError}
+          onRetry={retryResults}
+          retrying={retryingResults}
+        />
+      )}
+
       {/* No results yet — empty state */}
-      {!isScanning && !hasResults && !isLoading && (
+      {!isScanning && !resultsFailed && !hasResults && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-16 h-16 rounded-full bg-card border border-black/[0.10] flex items-center justify-center text-3xl mb-4">
             {scanWasRun ? "◉" : "◎"}
           </div>
           {scanWasRun ? (
             <>
-              <h2 className="text-foreground font-semibold text-lg mb-2">No EMA crossovers this week</h2>
-              <p className="text-muted-foreground text-sm max-w-sm leading-relaxed mb-2">
-                All 511 stocks were scanned — none had a weekly EMA 13/34 crossover on the most recent candle.
-              </p>
-              <p className="text-muted-foreground text-xs max-w-xs leading-relaxed mb-6">
-                This is common during sustained market trends. Most stocks are currently in a downtrend with no reversals yet. Check back after Friday's close.
+              <h2 className="text-foreground font-semibold text-lg mb-2">No reversals in the latest scan</h2>
+              <p className="text-muted-foreground text-sm max-w-sm leading-relaxed mb-6">
+                No stock flipped to a red or yellow candle on the weekly or monthly chart.
+                Quiet weeks happen when most stocks are holding their existing trend.
               </p>
             </>
           ) : (
             <>
               <h2 className="text-foreground font-semibold text-lg mb-2">No scan available yet</h2>
               <p className="text-muted-foreground text-sm max-w-xs leading-relaxed mb-6">
-                The scanner runs automatically every Friday at 4:15 PM EST after the weekly candle closes.
+                Run a scan to find stocks whose weekly or monthly trend just reversed.
+                Results are most reliable after Friday's close, once the weekly candle is final.
               </p>
             </>
           )}

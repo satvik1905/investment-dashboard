@@ -3,14 +3,11 @@ Scanner API endpoints
 Uses FastAPI BackgroundTasks — no Celery worker required.
 """
 
-import json
 import logging
-import os
 import uuid
 from datetime import date
 from typing import Optional
 
-import redis as redis_lib
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -18,38 +15,10 @@ from sqlalchemy import asc, desc
 
 from ..database import SessionLocal, get_db
 from ..models import ScannerResult
+from ..services import scan_progress
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-# ── Redis client ─────────────────────────────────────────────────────────────
-
-def _get_redis() -> redis_lib.Redis:
-    return redis_lib.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
-
-PROGRESS_TTL = 3600  # 1 hour
-
-
-def _set_progress(
-    r: redis_lib.Redis,
-    job_id: str,
-    status: str,
-    progress: int,
-    tickers_scanned: int,
-    total_tickers: int,
-    message: str,
-) -> None:
-    payload = {
-        "job_id": job_id,
-        "status": status,
-        "progress": progress,
-        "tickers_scanned": tickers_scanned,
-        "total_tickers": total_tickers,
-        "message": message,
-    }
-    r.setex(f"scanner_progress:{job_id}", PROGRESS_TTL, json.dumps(payload))
-    # Also write to the "latest" key so the no-job-id endpoint works
-    r.setex("scanner_progress", PROGRESS_TTL, json.dumps(payload))
 
 
 # ── Background scan task ─────────────────────────────────────────────────────
@@ -58,7 +27,7 @@ def _run_scan_background(job_id: str) -> None:
     """Runs in-process via FastAPI BackgroundTasks. No Celery needed."""
     from ..services.scanner import run_full_scan
 
-    r = _get_redis()
+    r = scan_progress.get_redis()
     db = SessionLocal()
     scan_date = date.today()
 
@@ -66,7 +35,7 @@ def _run_scan_background(job_id: str) -> None:
         def update_progress(
             jid: str, status: str, pct: int, scanned: int, total: int, message: str
         ) -> None:
-            _set_progress(r, jid, status, pct, scanned, total, message)
+            scan_progress.set_progress(r, jid, status, pct, scanned, total, message)
 
         results = run_full_scan(update_progress=update_progress, job_id=job_id)
 
@@ -100,13 +69,14 @@ def _run_scan_background(job_id: str) -> None:
         m_yel  = sum(1 for r in results if r.get("monthly_candle_color") == "YELLOW")
         msg    = f"Scan complete — {red} weekly red, {yellow} weekly yellow, {m_red} monthly red, {m_yel} monthly yellow"
         logger.info(f"[Scanner] {msg}")
-        _set_progress(r, job_id, "complete", 100, len(results), len(results), msg)
+        scan_progress.set_progress(r, job_id, "complete", 100, len(results), len(results), msg)
 
     except Exception as e:
         logger.error(f"[Scanner] Background scan failed: {e}", exc_info=True)
-        _set_progress(r, job_id, "failed", 0, 0, 0, f"Error: {str(e)[:200]}")
+        scan_progress.set_progress(r, job_id, "failed", 0, 0, 0, f"Error: {str(e)[:200]}")
         db.rollback()
     finally:
+        scan_progress.release_lock(r, job_id)
         db.close()
 
 
@@ -217,13 +187,20 @@ def get_scanner_results(
 def trigger_scan(background_tasks: BackgroundTasks):
     """
     Kick off a background scan and return a job_id immediately.
+    If a scan is already running, return its job_id instead of starting another.
     Frontend polls /progress/{job_id} every few seconds.
     """
     job_id = str(uuid.uuid4())
-    r = _get_redis()
+    r = scan_progress.get_redis()
+
+    if not scan_progress.acquire_lock(r, job_id):
+        running = scan_progress.lock_owner(r)
+        if running:
+            return TriggerResponse(job_id=running, message="Scan already running")
+        raise HTTPException(status_code=409, detail="Scanner busy — try again")
 
     # Seed Redis immediately so /progress/{job_id} never 404s
-    _set_progress(r, job_id, "running", 0, 0, 600, "Starting scan...")
+    scan_progress.set_progress(r, job_id, "running", 0, 0, 600, "Starting scan...")
 
     background_tasks.add_task(_run_scan_background, job_id)
     return TriggerResponse(job_id=job_id, message="Scanner started")
@@ -231,17 +208,15 @@ def trigger_scan(background_tasks: BackgroundTasks):
 
 @router.get("/progress/{job_id}", response_model=ScanProgressResponse)
 def get_scan_progress(job_id: str):
-    r = _get_redis()
-    raw = r.get(f"scanner_progress:{job_id}")
-    if not raw:
+    progress = scan_progress.read_progress(scan_progress.get_redis(), job_id)
+    if not progress:
         raise HTTPException(status_code=404, detail="Job not found or expired")
-    return ScanProgressResponse(**json.loads(raw))
+    return ScanProgressResponse(**progress)
 
 
 @router.get("/progress", response_model=Optional[ScanProgressResponse])
 def get_latest_progress():
-    r = _get_redis()
-    raw = r.get("scanner_progress")
-    if not raw:
+    progress = scan_progress.read_progress(scan_progress.get_redis())
+    if not progress:
         return None
-    return ScanProgressResponse(**json.loads(raw))
+    return ScanProgressResponse(**progress)
