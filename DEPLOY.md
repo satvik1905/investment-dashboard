@@ -104,14 +104,20 @@ Sign up for these five services (all have free tiers):
 
 ## Step 6: Database Migration
 
-Run Alembic migrations against the Neon database from your local machine:
+Render does not run migrations on deploy. Run them from your local machine
+**after** the new code is live (a migration that drops columns would break
+the old code still running):
 
 ```bash
 cd backend
-export DATABASE_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/swingiq?sslmode=require"
 source venv/bin/activate
-alembic upgrade head
+DATABASE_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/swingiq?sslmode=require" alembic upgrade head
 ```
+
+Alembic only uses `DATABASE_URL` when it is set in the shell; it ignores the
+value in `backend/.env`, so a bare `alembic upgrade head` migrates the local
+database from `alembic.ini`. The first log line shows which host is being
+migrated — check it before continuing.
 
 Verify the tables were created:
 
