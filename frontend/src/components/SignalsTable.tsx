@@ -5,6 +5,7 @@ import api from "../api/client";
 import { describeError } from "./ErrorState";
 import { isStale, signalAge } from "@/lib/freshness";
 import { CandleSwatch, type CandleColor } from "./CandleSwatch";
+import { dataIssue, needsDataCheck, type DataIssue } from "@/lib/dataQuality";
 import type { Signal } from "../hooks/useSignals";
 import type { LiveQuote } from "../hooks/useLivePrice";
 import { cn } from "@/lib/utils";
@@ -103,6 +104,9 @@ function needsAttention(signal: Signal): boolean {
 }
 
 function defaultOrder(a: Signal, b: Signal): number {
+  // Within a group, signals built on data that needs checking go after clean ones
+  const byData = Number(needsDataCheck(a)) - Number(needsDataCheck(b));
+  if (byData !== 0) return byData;
   const sa = candleState(a);
   const sb = candleState(b);
   const byState = (sa.color ? STATE_ORDER[sa.color] : 9) - (sb.color ? STATE_ORDER[sb.color] : 9);
@@ -154,6 +158,37 @@ function usePricePulse(price: number | null): boolean {
   }, [price]);
 
   return pulsing;
+}
+
+// ── Data-quality flags ───────────────────────────────────────────────────────
+
+function CheckDataFlag({ issue }: { issue: DataIssue | null }) {
+  if (issue?.severity !== "check") return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md bg-status-after px-1.5 py-px text-[11px] font-semibold text-amber-950 whitespace-nowrap"
+      title={issue.messages.join("\n")}
+    >
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+        <path d="M6 1.5L11 10.5H1L6 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+        <path d="M6 5v2.5M6 9v.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+      Check data
+      <span className="sr-only">: {issue.messages.join(" ")}</span>
+    </span>
+  );
+}
+
+function QuietDataNote({ issue }: { issue: DataIssue | null }) {
+  if (issue?.severity !== "quiet") return null;
+  return (
+    <span role="img" aria-label={issue.messages.join(" ")} title={issue.messages.join("\n")} className="inline-flex text-muted-foreground">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+        <circle cx="6" cy="6" r="4.75" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M6 5.5v3M6 3.6v.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
 }
 
 // ── Row actions (shared by table rows and phone cards) ───────────────────────
@@ -266,6 +301,7 @@ function SignalRow({
   const actions = useRowActions(signal, onRemove);
   const { livePrice, price, change } = rowPrices(signal, quote);
   const pulsing = usePricePulse(livePrice);
+  const issue = dataIssue(signal, quote);
 
   return (
     <>
@@ -275,14 +311,17 @@ function SignalRow({
       >
         {/* Ticker — the keyboard and screen-reader way into the row */}
         <TableCell className="py-2.5 px-3 pl-4 whitespace-nowrap">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onRowClick(signal); }}
-            aria-label={`Open ${signal.ticker} chart and signal`}
-            className="font-mono text-sm font-semibold text-foreground hover:text-primary hover:underline underline-offset-4 rounded-sm"
-          >
-            {signal.ticker}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRowClick(signal); }}
+              aria-label={`Open ${signal.ticker} chart and signal`}
+              className="font-mono text-sm font-semibold text-foreground hover:text-primary hover:underline underline-offset-4 rounded-sm"
+            >
+              {signal.ticker}
+            </button>
+            <CheckDataFlag issue={issue} />
+          </div>
         </TableCell>
 
         {/* Candle state */}
@@ -295,7 +334,10 @@ function SignalRow({
           "py-2.5 px-3 font-mono text-xs tabular-nums text-right whitespace-nowrap transition-colors duration-300",
           pulsing ? "text-primary" : "text-foreground",
         )}>
-          {price}
+          <span className="inline-flex items-center gap-1.5">
+            <QuietDataNote issue={issue} />
+            {price}
+          </span>
         </TableCell>
 
         {/* Change % — neutral */}
@@ -361,6 +403,7 @@ function SignalCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const { livePrice, price, change } = rowPrices(signal, quote);
   const pulsing = usePricePulse(livePrice);
+  const issue = dataIssue(signal, quote);
 
   return (
     <li className="flex items-stretch border-b border-border last:border-b-0">
@@ -370,8 +413,12 @@ function SignalCard({
         className="flex-1 min-w-0 text-left pl-4 pr-1 py-3 active:bg-accent cursor-pointer"
       >
         <div className="flex items-baseline justify-between gap-3">
-          <span className="font-mono text-[15px] font-semibold text-foreground">{signal.ticker}</span>
-          <span className="font-mono text-sm tabular-nums whitespace-nowrap">
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="font-mono text-[15px] font-semibold text-foreground">{signal.ticker}</span>
+            <CheckDataFlag issue={issue} />
+          </span>
+          <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums whitespace-nowrap">
+            <QuietDataNote issue={issue} />
             <span className={cn("transition-colors duration-300", pulsing ? "text-primary" : "text-foreground")}>{price}</span>
             <span className="text-muted-foreground text-xs ml-2">{change}</span>
           </span>

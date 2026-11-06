@@ -12,6 +12,7 @@ import { useLiveQuotes } from "../hooks/useLivePrice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { classifyWarnings } from "@/lib/dataQuality";
 import { ErrorState, describeError } from "./ErrorState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -438,6 +439,12 @@ export function StockDetailModal({ ticker, onClose }: Props) {
   const liveQuote = quotes[ticker];
   const livePrice = liveQuote?.current_price ?? null;
   const changePct = liveQuote?.change_pct ?? null;
+  const dataIssue = classifyWarnings([
+    ...new Set([
+      ...((signal?.raw_indicators?.data_warning as string[] | undefined) ?? []),
+      ...(liveQuote?.data_warning ?? []),
+    ]),
+  ]);
 
   // ── Derived UI state ──────────────────────────────────────────────────────────
   const badgeVariant = signal ? (SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold") : null;
@@ -534,14 +541,19 @@ export function StockDetailModal({ ticker, onClose }: Props) {
         </div>
       </div>
 
-      {/* Data quality warning */}
-      {(signal?.raw_indicators?.data_warning || liveQuote?.data_warning) && (
-        <Alert className="mx-3 sm:mx-5 mt-3 w-auto rounded-lg bg-status-after/10 border-status-after/25 text-status-after">
-          <AlertDescription className="text-xs leading-relaxed">
-            <span className="font-semibold">⚠ This ticker's data may be stale or incorrect:</span>{" "}
-            {((liveQuote?.data_warning ?? signal?.raw_indicators?.data_warning) as string[]).join(" · ")}
+      {/* Data quality: serious problems get a banner, the common "no regular market price" a quiet note */}
+      {dataIssue?.severity === "check" && (
+        <Alert className="mx-3 sm:mx-5 mt-3 w-auto rounded-lg bg-status-after/10 border-status-after/40">
+          <AlertDescription className="text-xs leading-relaxed text-amber-900">
+            <span className="font-semibold">Check this ticker's data before acting on the signal:</span>{" "}
+            {dataIssue.messages.join(" · ")}
           </AlertDescription>
         </Alert>
+      )}
+      {dataIssue?.severity === "quiet" && (
+        <p className="mx-3 sm:mx-5 mt-2.5 mb-1.5 text-xs text-muted-foreground">
+          Yahoo isn't reporting a regular-market price for {ticker} right now, so the latest price may lag.
+        </p>
       )}
 
       {/* ── Body: chart beside the panel on desktop, stacked and scrolling on phones ── */}
