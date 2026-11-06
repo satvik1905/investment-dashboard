@@ -22,3 +22,8 @@ dist/
 
 # Claude Code
 .claude/
+
+# Test artifacts
+.coverage
+cov_annotate/
+.pytest_cache/
