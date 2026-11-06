@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorState } from "../components/ErrorState";
+import { CandleSwatch } from "../components/CandleSwatch";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -64,8 +65,6 @@ interface ScanProgress {
 
 type TabKey = "RED" | "YELLOW" | "MONTHLY_RED" | "MONTHLY_YELLOW";
 
-// Same candle colors as the chart (StockDetailModal DC_FILL) so the scanner and chart read alike
-const CANDLE_FILL: Record<CandleColor, string> = { RED: "#FF4444", YELLOW: "#FFD700" };
 // Prior-trend weeks: cyan (downtrend) precede a red flip, blue (uptrend) precede a yellow flip
 const TREND_SEGMENT: Record<CandleColor, string> = { RED: "bg-cyan-500", YELLOW: "bg-[#1565C0]" };
 
@@ -156,16 +155,6 @@ function monthsAgo(n: number | null): string {
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
-
-function CandleSwatch({ color, className }: { color: CandleColor; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn("inline-block w-1.5 h-3.5 rounded-[2px] ring-1 ring-black/15 shrink-0", className)}
-      style={{ backgroundColor: CANDLE_FILL[color] }}
-    />
-  );
-}
 
 function ProgressBar({ progress }: { progress: ScanProgress }) {
   const pct = Math.min(100, Math.max(0, progress.progress));

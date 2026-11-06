@@ -3,6 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "../api/client";
 import { describeError } from "./ErrorState";
+import { isStale, signalAge } from "@/lib/freshness";
+import { CandleSwatch, type CandleColor } from "./CandleSwatch";
 import type { Signal } from "../hooks/useSignals";
 import type { LiveQuote } from "../hooks/useLivePrice";
 import { cn } from "@/lib/utils";
@@ -15,7 +17,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -37,11 +38,11 @@ import {
 
 type SortKey =
   | "ticker"
-  | "signal"
+  | "state"
   | "price"
   | "change"
   | "confidence"
-  | "reason";
+  | "age";
 
 type SortDir = "asc" | "desc";
 type ConfidenceVariant = "number" | "bar";
@@ -53,34 +54,74 @@ interface Props {
   onRemove: (ticker: string) => void;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Candle state ─────────────────────────────────────────────────────────────
 
-const SIGNAL_ORDER: Record<string, number> = {
-  STRONG_BUY: 0,
-  BUY: 1,
-  SELL: 2,
-  STRONG_SELL: 3,
-  HOLD: 4,
+// A flip within this many candles (the flip candle and the one after) counts as new
+const RECENT_FLIP_CANDLES = 2;
+
+const STATE_LABEL: Record<CandleColor, string> = {
+  RED: "Bullish flip",
+  YELLOW: "Bearish flip",
+  BLUE: "Uptrend",
+  CYAN: "Downtrend",
 };
 
-const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
-  STRONG_BUY: "strongBuy",
-  BUY: "buy",
-  SELL: "sell",
-  STRONG_SELL: "strongSell",
-  HOLD: "hold",
-};
+// Fresh flips first, then trends; within a trend, the most recent flip first
+const STATE_ORDER: Record<CandleColor, number> = { RED: 0, YELLOW: 1, BLUE: 2, CYAN: 3 };
 
-const SIGNAL_LABEL: Record<string, string> = {
-  STRONG_BUY: "STRONG BUY",
-  BUY: "BUY",
-  SELL: "SELL",
-  STRONG_SELL: "STRONG SELL",
-  HOLD: "HOLD",
-};
+interface CandleState {
+  color: CandleColor | null;
+  label: string;
+  detail: string;
+  sinceFlip: number | null;
+}
 
-function isActionable(sig: string): boolean {
-  return sig !== "HOLD";
+function candleState(signal: Signal): CandleState {
+  const ri = signal.raw_indicators ?? {};
+  // Older rows may lack Danny Cheng fields; fall back to the signal itself
+  const color =
+    (ri.danny_current_color as CandleColor | undefined) ??
+    (signal.signal.endsWith("BUY") ? "RED" : signal.signal.endsWith("SELL") ? "YELLOW" : null);
+  const sinceFlip = (ri.danny_candles_since_signal as number | undefined) ?? null;
+  const lastFlip = (ri.danny_last_signal_color as string | null | undefined) ?? null;
+
+  if (!color) return { color: null, label: "Hold", detail: "Trend data unavailable", sinceFlip };
+
+  let detail: string;
+  if (color === "RED" || color === "YELLOW") {
+    detail = `${color === "RED" ? "Red" : "Yellow"} candle on the latest close`;
+  } else if (lastFlip && sinceFlip != null) {
+    detail = `${sinceFlip} candle${sinceFlip === 1 ? "" : "s"} since ${lastFlip.toLowerCase()} flip`;
+  } else {
+    detail = "No flip in the last 6 months";
+  }
+  return { color, label: STATE_LABEL[color], detail, sinceFlip };
+}
+
+function needsAttention(signal: Signal): boolean {
+  const { sinceFlip } = candleState(signal);
+  return (sinceFlip != null && sinceFlip < RECENT_FLIP_CANDLES) || isStale(signal.generated_at);
+}
+
+function defaultOrder(a: Signal, b: Signal): number {
+  const sa = candleState(a);
+  const sb = candleState(b);
+  const byState = (sa.color ? STATE_ORDER[sa.color] : 9) - (sb.color ? STATE_ORDER[sb.color] : 9);
+  if (byState !== 0) return byState;
+  return (sa.sinceFlip ?? 999) - (sb.sinceFlip ?? 999);
+}
+
+function StateCell({ signal }: { signal: Signal }) {
+  const state = candleState(signal);
+  return (
+    <div className="flex items-center gap-2.5" title={signal.key_reason ?? undefined}>
+      {state.color ? <CandleSwatch color={state.color} className="h-4" /> : <span className="w-1.5 shrink-0" />}
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-foreground leading-snug">{state.label}</div>
+        <div className="text-xs text-muted-foreground leading-snug truncate">{state.detail}</div>
+      </div>
+    </div>
+  );
 }
 
 // ── Sort arrow ───────────────────────────────────────────────────────────────
@@ -158,9 +199,6 @@ function SignalRow({
   const changePct = quote?.change_pct ?? null;
   const pulsing = usePricePulse(livePrice);
 
-  const badgeVariant = SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold";
-  const badgeLabel = SIGNAL_LABEL[signal.signal] ?? "HOLD";
-
   const handleRefresh = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (refreshing) return;
@@ -186,15 +224,13 @@ function SignalRow({
         className="cursor-pointer hover:bg-accent"
       >
         {/* Ticker */}
-        <TableCell className="py-2.5 px-3 font-mono text-sm font-semibold text-foreground whitespace-nowrap">
+        <TableCell className="py-2.5 px-3 pl-4 font-mono text-sm font-semibold text-foreground whitespace-nowrap">
           {signal.ticker}
         </TableCell>
 
-        {/* Signal badge */}
-        <TableCell className="py-2.5 px-3">
-          <Badge variant={badgeVariant} className="text-[10px] font-bold tracking-wide">
-            {badgeLabel}
-          </Badge>
+        {/* Candle state */}
+        <TableCell className="py-2.5 px-3 max-w-[260px]">
+          <StateCell signal={signal} />
         </TableCell>
 
         {/* Price */}
@@ -215,9 +251,20 @@ function SignalRow({
           <ConfidenceCell value={signal.confidence} variant={confVariant} />
         </TableCell>
 
-        {/* Key reason */}
-        <TableCell className="py-2.5 px-3 text-xs text-muted-foreground max-w-[180px] truncate" title={signal.key_reason ?? ""}>
-          {signal.key_reason ?? "—"}
+        {/* Signal age — stale once a newer daily close exists */}
+        <TableCell className="py-2.5 px-3 text-right whitespace-nowrap">
+          {isStale(signal.generated_at) ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-md border border-status-after/40 bg-status-after/10 px-1.5 py-px text-[11px] font-medium text-amber-800"
+              title={signal.generated_at ? `Calculated ${new Date(signal.generated_at).toLocaleString()} — before the last market close` : "Never calculated"}
+            >
+              <span className="font-mono tabular-nums">{signalAge(signal.generated_at)}</span> old
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground" title={signal.generated_at ? new Date(signal.generated_at).toLocaleString() : undefined}>
+              {signalAge(signal.generated_at)}
+            </span>
+          )}
         </TableCell>
 
         {/* Actions */}
@@ -284,11 +331,38 @@ function SignalRow({
   );
 }
 
+// ── Group header row ─────────────────────────────────────────────────────────
+
+function GroupHeader({ title, count, note }: { title: string; count: number; note: string }) {
+  return (
+    <TableRow className="hover:bg-transparent border-b border-border">
+      <TableCell colSpan={COL_COUNT} className="pt-5 pb-2 px-4 bg-card">
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
+          <span className="text-xs text-muted-foreground">· {note}</span>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+// Ticker, State, Price, Change, Confidence, Updated, actions
+const COL_COUNT = 7;
+
+const STATE_FILTERS: { value: string; label: string; color?: CandleColor }[] = [
+  { value: "all", label: "All states" },
+  { value: "RED", label: "Bullish flips", color: "RED" },
+  { value: "YELLOW", label: "Bearish flips", color: "YELLOW" },
+  { value: "BLUE", label: "Uptrend", color: "BLUE" },
+  { value: "CYAN", label: "Downtrend", color: "CYAN" },
+];
+
 // ── Main table component ─────────────────────────────────────────────────────
 
 export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [confVariant, setConfVariant] = useState<ConfidenceVariant>("bar");
@@ -298,69 +372,74 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir(key === "ticker" || key === "reason" ? "asc" : "desc");
+      setSortDir(key === "ticker" || key === "state" ? "asc" : "desc");
     }
   };
 
-  const processed = useMemo(() => {
+  const { attention, holding } = useMemo(() => {
     let list = [...signals];
 
     if (search) {
       const q = search.toUpperCase();
       list = list.filter((s) => s.ticker.includes(q));
     }
-
-    if (statusFilter !== "all") {
-      list = list.filter((s) => {
-        if (statusFilter === "BUY") return s.signal === "BUY" || s.signal === "STRONG_BUY";
-        if (statusFilter === "SELL") return s.signal === "SELL" || s.signal === "STRONG_SELL";
-        if (statusFilter === "HOLD") return s.signal === "HOLD";
-        return true;
-      });
+    if (stateFilter !== "all") {
+      list = list.filter((s) => candleState(s).color === stateFilter);
     }
 
-    if (sortKey) {
-      list.sort((a, b) => {
-        let cmp = 0;
-        const qA = quotes[a.ticker];
-        const qB = quotes[b.ticker];
-        switch (sortKey) {
-          case "ticker":    cmp = a.ticker.localeCompare(b.ticker); break;
-          case "signal":    cmp = (SIGNAL_ORDER[a.signal] ?? 4) - (SIGNAL_ORDER[b.signal] ?? 4); break;
-          case "price":     cmp = (qA?.current_price ?? 0) - (qB?.current_price ?? 0); break;
-          case "change":    cmp = (qA?.change_pct ?? 0) - (qB?.change_pct ?? 0); break;
-          case "confidence":cmp = (a.confidence ?? 0) - (b.confidence ?? 0); break;
-          case "reason":    cmp = (a.key_reason ?? "").localeCompare(b.key_reason ?? ""); break;
-        }
-        return sortDir === "asc" ? cmp : -cmp;
-      });
-    } else {
-      list.sort((a, b) => {
-        const aAct = isActionable(a.signal);
-        const bAct = isActionable(b.signal);
-        if (aAct !== bAct) return aAct ? -1 : 1;
-        return (b.confidence ?? 0) - (a.confidence ?? 0);
-      });
-    }
+    const compare = (a: Signal, b: Signal): number => {
+      if (!sortKey) return defaultOrder(a, b);
+      let cmp = 0;
+      const qA = quotes[a.ticker];
+      const qB = quotes[b.ticker];
+      switch (sortKey) {
+        case "ticker":    cmp = a.ticker.localeCompare(b.ticker); break;
+        case "state":     cmp = defaultOrder(a, b); break;
+        case "price":     cmp = (qA?.current_price ?? 0) - (qB?.current_price ?? 0); break;
+        case "change":    cmp = (qA?.change_pct ?? 0) - (qB?.change_pct ?? 0); break;
+        case "confidence":cmp = (a.confidence ?? 0) - (b.confidence ?? 0); break;
+        case "age":       cmp = new Date(b.generated_at ?? 0).getTime() - new Date(a.generated_at ?? 0).getTime(); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    };
 
-    return list;
-  }, [signals, quotes, search, statusFilter, sortKey, sortDir]);
+    // Sorting applies within each group; the groups themselves stay in place
+    return {
+      attention: list.filter(needsAttention).sort(compare),
+      holding: list.filter((s) => !needsAttention(s)).sort(compare),
+    };
+  }, [signals, quotes, search, stateFilter, sortKey, sortDir]);
+
+  const filtering = !!search || stateFilter !== "all";
+  const total = attention.length + holding.length;
 
   const COLS: { key: SortKey; label: string; align?: string }[] = [
     { key: "ticker",     label: "Ticker" },
-    { key: "signal",     label: "Signal" },
-    { key: "price",      label: "Price",     align: "text-right" },
-    { key: "change",     label: "Change %",  align: "text-right" },
-    { key: "confidence", label: "Conf" },
-    { key: "reason",     label: "Key Signal" },
+    { key: "state",      label: "State" },
+    { key: "price",      label: "Price",      align: "text-right" },
+    { key: "change",     label: "Change",     align: "text-right" },
+    { key: "confidence", label: "Confidence" },
+    { key: "age",        label: "Updated",    align: "text-right" },
   ];
 
+  const renderRows = (rows: Signal[]) =>
+    rows.map((signal) => (
+      <SignalRow
+        key={signal.id}
+        signal={signal}
+        quote={quotes[signal.ticker]}
+        confVariant={confVariant}
+        onRowClick={onRowClick}
+        onRemove={onRemove}
+      />
+    ));
+
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden shadow-xs">
+    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-3 border-b border-border bg-muted">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <div className="relative w-52">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
             <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
             <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
@@ -368,20 +447,23 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search for tickers..."
-            className="w-full pl-9 pr-3 py-2 bg-card text-foreground text-xs font-mono placeholder:text-muted-foreground"
+            placeholder="Search tickers"
+            aria-label="Search tickers"
+            className="w-full pl-9 pr-3 py-2 bg-card text-foreground text-sm placeholder:text-muted-foreground"
           />
         </div>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[130px] h-9 bg-card text-foreground text-xs font-mono">
+        <Select value={stateFilter} onValueChange={setStateFilter}>
+          <SelectTrigger className="w-[150px] h-9 bg-card text-foreground text-sm" aria-label="Filter by candle state">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-xs font-mono">All Status</SelectItem>
-            <SelectItem value="BUY" className="text-xs font-mono">Buy</SelectItem>
-            <SelectItem value="SELL" className="text-xs font-mono">Sell</SelectItem>
-            <SelectItem value="HOLD" className="text-xs font-mono">Hold</SelectItem>
+            {STATE_FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value} className="text-sm">
+                {f.color && <CandleSwatch color={f.color} className="h-3" />}
+                {f.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -398,13 +480,13 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
 
       <Table>
         <TableHeader>
-          <TableRow className="border-b border-border">
+          <TableRow className="border-b border-border hover:bg-transparent">
             {COLS.map((col) => (
               <TableHead
                 key={col.key}
                 onClick={() => handleSort(col.key)}
                 className={cn(
-                  "py-2.5 px-3 text-xs font-semibold uppercase tracking-wider font-mono text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap sticky top-0 bg-muted z-10",
+                  "h-9 px-3 first:pl-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap sticky top-0 bg-card z-10",
                   col.align,
                 )}
               >
@@ -412,27 +494,58 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
                 <SortArrow active={sortKey === col.key} dir={sortDir} />
               </TableHead>
             ))}
-            <TableHead className="py-2.5 px-3 w-16 sticky top-0 bg-muted z-10" />
+            <TableHead className="h-9 px-3 w-16 sticky top-0 bg-card z-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {processed.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={10} className="py-10 text-center text-muted-foreground text-sm">
-                {search || statusFilter !== "all" ? "No signals match your filter." : "No signals yet."}
+          {total === 0 ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={COL_COUNT} className="py-10 text-center text-sm text-muted-foreground">
+                {filtering ? (
+                  <>
+                    No signals match your filter.{" "}
+                    <button
+                      type="button"
+                      onClick={() => { setSearch(""); setStateFilter("all"); }}
+                      className="text-foreground font-medium underline underline-offset-4 hover:text-primary cursor-pointer"
+                    >
+                      Clear filters
+                    </button>
+                  </>
+                ) : (
+                  "No signals yet."
+                )}
               </TableCell>
             </TableRow>
           ) : (
-            processed.map((signal) => (
-              <SignalRow
-                key={signal.id}
-                signal={signal}
-                quote={quotes[signal.ticker]}
-                confVariant={confVariant}
-                onRowClick={onRowClick}
-                onRemove={onRemove}
+            <>
+              <GroupHeader
+                title="Needs attention"
+                count={attention.length}
+                note={`flipped in the last ${RECENT_FLIP_CANDLES} candles, or out of date`}
               />
-            ))
+              {attention.length > 0 ? (
+                renderRows(attention)
+              ) : (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={COL_COUNT} className="px-4 py-4 text-sm text-muted-foreground">
+                    {filtering
+                      ? "Nothing here matches your filter."
+                      : `Nothing new — no flips in the last ${RECENT_FLIP_CANDLES} candles, and every signal is current.`}
+                  </TableCell>
+                </TableRow>
+              )}
+              {holding.length > 0 && (
+                <>
+                  <GroupHeader
+                    title="Holding trend"
+                    count={holding.length}
+                    note={`no flip in the last ${RECENT_FLIP_CANDLES} candles`}
+                  />
+                  {renderRows(holding)}
+                </>
+              )}
+            </>
           )}
         </TableBody>
       </Table>
