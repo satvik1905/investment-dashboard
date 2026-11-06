@@ -437,7 +437,6 @@ export function StockDetailModal({ ticker, onClose }: Props) {
   // ── Derived UI state ──────────────────────────────────────────────────────────
   const badgeVariant = signal ? (SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold") : null;
   const badgeLabel   = signal ? (SIGNAL_LABEL[signal.signal] ?? "HOLD") : null;
-  const confidence   = signal?.confidence ?? 0;
   const currentPrice = livePrice ?? (signal?.raw_indicators?.current_price as number | undefined) ?? null;
   const smaLabels    = data?.sma_labels ?? ["SMA 20", "SMA 50", "SMA 200"];
 
@@ -844,24 +843,6 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 )}
               </div>
 
-
-              {/* 3. Confidence */}
-              <div className="border-t border-border mt-4 pt-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground shrink-0">Confidence</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-conf-track">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        confidence <= 25 ? "bg-destructive" : confidence <= 75 ? "bg-status-after" : "bg-primary"
-                      }`}
-                      style={{ width: `${Math.min(confidence, 100)}%` }}
-                    />
-                  </div>
-                  <span className={`font-mono text-sm tabular-nums font-semibold w-7 text-right ${
-                    confidence <= 25 ? "text-destructive" : confidence <= 75 ? "text-amber-700" : "text-primary"
-                  }`}>{confidence}</span>
-                </div>
-              </div>
 
               {/* 4. Why */}
               <div className="border-t border-border mt-4 pt-4">

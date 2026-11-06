@@ -42,11 +42,9 @@ type SortKey =
   | "state"
   | "price"
   | "change"
-  | "confidence"
   | "age";
 
 type SortDir = "asc" | "desc";
-type ConfidenceVariant = "number" | "bar";
 
 interface Props {
   signals: Signal[];
@@ -135,30 +133,6 @@ function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
       <path d="M2.5 6L5 8.5 7.5 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"
         className={active && dir === "desc" ? "text-foreground" : active ? "opacity-0" : "opacity-40"} />
     </svg>
-  );
-}
-
-// ── Confidence cell — single colour, no threshold ───────────────────────────
-
-function ConfidenceCell({ value, variant }: { value: number | null; variant: ConfidenceVariant }) {
-  if (value == null) return <span className="text-muted-foreground font-mono text-xs">—</span>;
-
-  if (variant === "number") {
-    return <span className="font-mono text-xs tabular-nums font-semibold text-muted-foreground">{value}</span>;
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="font-mono text-xs tabular-nums font-semibold w-6 text-right text-muted-foreground">
-        {value}
-      </span>
-      <div className="flex-1 h-1 rounded-full bg-conf-track min-w-[40px] max-w-[60px]">
-        <div
-          className="h-full rounded-full bg-conf-fill transition-all"
-          style={{ width: `${Math.min(value, 100)}%` }}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -281,13 +255,11 @@ function rowPrices(signal: Signal, quote?: LiveQuote) {
 function SignalRow({
   signal,
   quote,
-  confVariant,
   onRowClick,
   onRemove,
 }: {
   signal: Signal;
   quote?: LiveQuote;
-  confVariant: ConfidenceVariant;
   onRowClick: (s: Signal) => void;
   onRemove: (ticker: string) => void;
 }) {
@@ -329,11 +301,6 @@ function SignalRow({
         {/* Change % — neutral */}
         <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right whitespace-nowrap text-foreground">
           {change}
-        </TableCell>
-
-        {/* Confidence */}
-        <TableCell className="py-2.5 px-3">
-          <ConfidenceCell value={signal.confidence} variant={confVariant} />
         </TableCell>
 
         {/* Signal age */}
@@ -478,8 +445,8 @@ function MobileGroupHeader({ title, count, note }: { title: string; count: numbe
   );
 }
 
-// Ticker, State, Price, Change, Confidence, Updated, actions
-const COL_COUNT = 7;
+// Ticker, State, Price, Change, Updated, actions
+const COL_COUNT = 6;
 
 const STATE_FILTERS: { value: string; label: string; color?: CandleColor }[] = [
   { value: "all", label: "All states" },
@@ -496,7 +463,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [confVariant, setConfVariant] = useState<ConfidenceVariant>("bar");
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -528,7 +494,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
         case "state":     cmp = defaultOrder(a, b); break;
         case "price":     cmp = (qA?.current_price ?? 0) - (qB?.current_price ?? 0); break;
         case "change":    cmp = (qA?.change_pct ?? 0) - (qB?.change_pct ?? 0); break;
-        case "confidence":cmp = (a.confidence ?? 0) - (b.confidence ?? 0); break;
         case "age":       cmp = new Date(b.generated_at ?? 0).getTime() - new Date(a.generated_at ?? 0).getTime(); break;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -549,7 +514,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
     { key: "state",      label: "State" },
     { key: "price",      label: "Price",      align: "text-right" },
     { key: "change",     label: "Change",     align: "text-right" },
-    { key: "confidence", label: "Confidence" },
     { key: "age",        label: "Updated",    align: "text-right" },
   ];
 
@@ -593,7 +557,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
         key={signal.id}
         signal={signal}
         quote={quotes[signal.ticker]}
-        confVariant={confVariant}
         onRowClick={onRowClick}
         onRemove={onRemove}
       />
@@ -632,16 +595,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
           </SelectContent>
         </Select>
 
-        <Button
-          variant="outline"
-          size="icon-xs"
-          onClick={() => setConfVariant((v) => (v === "number" ? "bar" : "number"))}
-          title={`Confidence: ${confVariant === "number" ? "number only" : "number + bar"}`}
-          aria-label={`Show confidence as ${confVariant === "number" ? "number and bar" : "number only"}`}
-          className="hidden lg:inline-flex text-[10px] font-mono"
-        >
-          {confVariant === "number" ? "#" : "▬"}
-        </Button>
       </div>
 
       {/* Desktop: table */}
