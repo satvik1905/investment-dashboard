@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Signal } from "../hooks/useSignals";
 import { CandleSwatch, type CandleColor } from "./CandleSwatch";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,16 @@ export function candleState(signal: Signal): CandleState {
   return { color, label: STATE_LABEL[color], detail, sinceFlip };
 }
 
-export function StateCell({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "lg" }) {
+export function StateCell({
+  signal,
+  size = "sm",
+  badges,
+}: {
+  signal: Signal;
+  size?: "sm" | "lg";
+  /** Caveats that belong to the signal itself, e.g. "Check data" or "9d old" */
+  badges?: ReactNode;
+}) {
   const state = candleState(signal);
   const large = size === "lg";
   return (
@@ -52,7 +62,10 @@ export function StateCell({ signal, size = "sm" }: { signal: Signal; size?: "sm"
         ? <CandleSwatch color={state.color} className={large ? "w-2 h-6" : "h-4"} />
         : <span className="w-1.5 shrink-0" />}
       <div className="min-w-0">
-        <div className={cn("font-medium text-foreground leading-snug", large ? "text-base font-semibold" : "text-sm")}>{state.label}</div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className={cn("font-medium text-foreground leading-snug", large ? "text-base font-semibold" : "text-sm")}>{state.label}</span>
+          {badges}
+        </div>
         <div className={cn("text-muted-foreground leading-snug truncate", large ? "text-sm" : "text-xs")}>{state.detail}</div>
       </div>
     </div>

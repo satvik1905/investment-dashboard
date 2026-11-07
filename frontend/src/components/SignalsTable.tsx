@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "../api/client";
 import { describeError } from "./ErrorState";
-import { isStale, signalAge } from "@/lib/freshness";
+import { isStale, lastMarketClose, signalAge } from "@/lib/freshness";
 import { CandleSwatch, type CandleColor } from "./CandleSwatch";
 import { candleState, StateCell } from "./CandleState";
 import { dataIssue, needsDataCheck, type DataIssue } from "@/lib/dataQuality";
@@ -43,8 +43,7 @@ type SortKey =
   | "ticker"
   | "state"
   | "price"
-  | "change"
-  | "age";
+  | "change";
 
 type SortDir = "asc" | "desc";
 
@@ -78,13 +77,13 @@ const ATTENTION_GROUPS: { key: Exclude<Bucket, "holding">; title: string; note: 
 ];
 
 function defaultOrder(a: Signal, b: Signal): number {
+  // A signal built on data that needs checking never leads its group, whatever its color
+  const byData = Number(needsDataCheck(a)) - Number(needsDataCheck(b));
+  if (byData !== 0) return byData;
   const sa = candleState(a);
   const sb = candleState(b);
   const byState = (sa.color ? STATE_ORDER[sa.color] : 9) - (sb.color ? STATE_ORDER[sb.color] : 9);
   if (byState !== 0) return byState;
-  // Within a state, signals built on data that needs checking go after clean ones
-  const byData = Number(needsDataCheck(a)) - Number(needsDataCheck(b));
-  if (byData !== 0) return byData;
   return (sa.sinceFlip ?? 999) - (sb.sinceFlip ?? 999);
 }
 
@@ -278,13 +277,12 @@ function SignalRow({
             >
               {signal.ticker}
             </button>
-            <CheckDataFlag issue={issue} />
           </div>
         </TableCell>
 
-        {/* Candle state */}
-        <TableCell className="py-2.5 px-3 max-w-[260px]">
-          <StateCell signal={signal} />
+        {/* Candle state, with any caveats about the signal itself */}
+        <TableCell className="py-2.5 px-3 max-w-[340px]">
+          <StateCell signal={signal} badges={<><CheckDataFlag issue={issue} /><AgeLabel signal={signal} /></>} />
         </TableCell>
 
         {/* Price */}
@@ -301,11 +299,6 @@ function SignalRow({
         {/* Change % — neutral */}
         <TableCell className="py-2.5 px-3 font-mono text-xs tabular-nums text-right whitespace-nowrap text-foreground">
           {change}
-        </TableCell>
-
-        {/* Signal age */}
-        <TableCell className="py-2.5 px-3 text-right">
-          <AgeLabel signal={signal} />
         </TableCell>
 
         {/* Actions */}
@@ -371,19 +364,15 @@ function SignalCard({
         className="flex-1 min-w-0 text-left pl-4 pr-1 py-3 active:bg-accent cursor-pointer"
       >
         <div className="flex items-baseline justify-between gap-3">
-          <span className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-[15px] font-semibold text-foreground">{signal.ticker}</span>
-            <CheckDataFlag issue={issue} />
-          </span>
+          <span className="font-mono text-[15px] font-semibold text-foreground">{signal.ticker}</span>
           <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums whitespace-nowrap">
             <QuietDataNote issue={issue} />
             <span className={cn("transition-colors duration-300", pulsing ? "text-primary" : "text-foreground")}>{price}</span>
             <span className="text-muted-foreground text-xs ml-2">{change}</span>
           </span>
         </div>
-        <div className="mt-1.5 flex items-center justify-between gap-3">
-          <StateCell signal={signal} />
-          <AgeLabel signal={signal} />
+        <div className="mt-1.5">
+          <StateCell signal={signal} badges={<><CheckDataFlag issue={issue} /><AgeLabel signal={signal} /></>} />
         </div>
       </button>
 
@@ -483,11 +472,21 @@ function MobileGroupHeader(props: GroupHeaderProps) {
   );
 }
 
-function FlipSummary({ bullish, bearish, confirming, stale }: { bullish: number; bearish: number; confirming: number; stale: number }) {
+function FlipSummary({
+  bullish, bearish, confirming, stale, flagged,
+}: {
+  bullish: number; bearish: number; confirming: number; stale: number; flagged: number;
+}) {
   const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+  const close = lastMarketClose().toLocaleDateString("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+  });
   return (
     <div className="px-4 pt-4 pb-3 border-b border-border">
-      <h2 className="text-xs font-medium text-muted-foreground">Since the last close</h2>
+      <h2 className="text-xs font-medium text-muted-foreground">
+        Since the {close} close
+        {stale === 0 && <span> · all signals current</span>}
+      </h2>
       <p className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-foreground">
         <span className="inline-flex items-center gap-1.5">
           <CandleSwatch color="RED" />
@@ -502,9 +501,16 @@ function FlipSummary({ bullish, bearish, confirming, stale }: { bullish: number;
         <span className="text-muted-foreground">
           <span className="font-mono tabular-nums">{confirming}</span> flipped a candle ago
         </span>
-        <span className={stale > 0 ? "font-medium text-amber-800" : "text-muted-foreground"}>
-          <span className="font-mono tabular-nums">{stale}</span> out of date
-        </span>
+        {flagged > 0 && (
+          <span className="font-medium text-amber-800">
+            <span className="font-mono tabular-nums">{flagged}</span> {plural(flagged, "needs", "need")} a data check
+          </span>
+        )}
+        {stale > 0 && (
+          <span className="font-medium text-amber-800">
+            <span className="font-mono tabular-nums">{stale}</span> out of date
+          </span>
+        )}
       </p>
     </div>
   );
@@ -516,8 +522,8 @@ function readHoldingExpanded(): boolean {
   try { return localStorage.getItem(HOLDING_KEY) === "1"; } catch { return false; }
 }
 
-// Ticker, State, Price, Change, Updated, actions
-const COL_COUNT = 6;
+// Ticker, State, Price, Change, actions
+const COL_COUNT = 5;
 
 const STATE_FILTERS: { value: string; label: string; color?: CandleColor }[] = [
   { value: "all", label: "All states" },
@@ -545,8 +551,9 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
 
   // Summary counts always describe the whole watchlist, not the filtered view
   const summary = useMemo(() => {
-    const counts = { bullish: 0, bearish: 0, confirming: 0, stale: 0 };
+    const counts = { bullish: 0, bearish: 0, confirming: 0, stale: 0, flagged: 0 };
     for (const s of signals) {
+      if (needsDataCheck(s)) counts.flagged++;
       const b = bucketOf(s);
       if (b === "flipped") candleState(s).color === "RED" ? counts.bullish++ : counts.bearish++;
       else if (b === "confirming") counts.confirming++;
@@ -585,7 +592,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
         case "state":     cmp = defaultOrder(a, b); break;
         case "price":     cmp = (qA?.current_price ?? 0) - (qB?.current_price ?? 0); break;
         case "change":    cmp = (qA?.change_pct ?? 0) - (qB?.change_pct ?? 0); break;
-        case "age":       cmp = new Date(b.generated_at ?? 0).getTime() - new Date(a.generated_at ?? 0).getTime(); break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     };
@@ -614,7 +620,6 @@ export function SignalsTable({ signals, quotes, onRowClick, onRemove }: Props) {
     { key: "state",      label: "State" },
     { key: "price",      label: "Price",      align: "text-right" },
     { key: "change",     label: "Change",     align: "text-right" },
-    { key: "age",        label: "Updated",    align: "text-right" },
   ];
 
   const emptyMessage = filtering ? (
