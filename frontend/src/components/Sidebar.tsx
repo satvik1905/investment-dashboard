@@ -1,10 +1,13 @@
 import { useAppStore } from "../store/appStore";
+import { useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { toast } from "sonner";
 import { useAuth } from "../hooks/useAuth";
-import { supabaseEnabled } from "../lib/supabase";
+import { supabase, supabaseEnabled } from "../lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 
 const NAV_ITEMS = [
   {
@@ -74,10 +77,39 @@ function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
   );
 }
 
-/** Avatar + name that opens a small account menu (identity and log out). */
+const EDIT_ICON = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M10.5 2.5l3 3L6 13H3v-3l7.5-7.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+  </svg>
+);
+
+/** Avatar + name that opens a small account menu (identity, edit name, log out). */
 function AccountMenu({ collapsed = false, compact = false }: { collapsed?: boolean; compact?: boolean }) {
   const { user, signOut } = useAuth();
   const name = displayName(user);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const startEditing = () => {
+    setDraft(user?.user_metadata?.full_name ?? "");
+    setEditing(true);
+  };
+
+  const saveName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const fullName = draft.trim();
+    if (!fullName) return;
+    setSaving(true);
+    // Stored on the Supabase user, so it follows the account across devices
+    const { error } = await supabase.auth.updateUser({ data: { full_name: fullName } });
+    setSaving(false);
+    if (error) {
+      toast.error(`Couldn't save name: ${error.message}`);
+      return;
+    }
+    setEditing(false);
+  };
 
   let trigger;
   if (compact) {
@@ -114,7 +146,7 @@ function AccountMenu({ collapsed = false, compact = false }: { collapsed?: boole
   }
 
   return (
-    <Popover>
+    <Popover onOpenChange={(open) => !open && setEditing(false)}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         side={compact ? "top" : collapsed ? "right" : "top"}
@@ -132,6 +164,38 @@ function AccountMenu({ collapsed = false, compact = false }: { collapsed?: boole
           </div>
         </div>
         <div className="my-1 h-px bg-border" />
+        {editing ? (
+          <form onSubmit={saveName} className="flex flex-col gap-2 px-2 py-1.5">
+            <label htmlFor="account-name" className="text-xs font-medium text-muted-foreground">
+              Your name
+            </label>
+            <Input
+              id="account-name"
+              autoFocus
+              value={draft}
+              maxLength={60}
+              placeholder="e.g. Satvik Khopkar"
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <div className="flex justify-end gap-1.5">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={saving || !draft.trim()}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <Button
+            variant="ghost"
+            onClick={startEditing}
+            className="w-full flex items-center gap-2.5 px-2 py-2 h-auto rounded-md justify-start text-sm text-muted-foreground hover:text-foreground hover:bg-accent"
+          >
+            <span className="shrink-0">{EDIT_ICON}</span>
+            Edit name
+          </Button>
+        )}
         <Button
           variant="ghost"
           onClick={signOut}
