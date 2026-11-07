@@ -9,6 +9,7 @@ import { StockDetailModal } from "../components/StockDetailModal";
 import { useRemoveSignal, useGenerateSignal } from "../hooks/useSignals";
 import { TickerAutocomplete } from "../components/TickerAutocomplete";
 import { AlertBanner } from "../components/AlertBanner";
+import { candleState } from "../components/CandleState";
 import { ErrorState } from "../components/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,7 @@ export function Dashboard() {
     if (!t) return;
     addSignal.mutate(t, {
       onSuccess: (sig) => {
-        toast.success(`${sig.ticker} added — ${sig.signal}`);
+        toast.success(`${sig.ticker} added — ${candleState(sig).label}`);
         setAddModalOpen(false);
       },
       onError: (err: unknown) => {

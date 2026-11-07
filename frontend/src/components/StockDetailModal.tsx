@@ -10,7 +10,8 @@ import api from "../api/client";
 import type { Signal } from "../hooks/useSignals";
 import { useLiveQuotes } from "../hooks/useLivePrice";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CandleSwatch } from "./CandleSwatch";
+import { candleState, StateCell } from "./CandleState";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { classifyWarnings } from "@/lib/dataQuality";
 import { ErrorState, describeError } from "./ErrorState";
@@ -80,22 +81,6 @@ const BG     = "#ffffff";
 const TEXT   = "#64748b";
 const GRID   = "#e2e8f0";
 const BORDER = "#e2e8f0";
-
-const SIGNAL_BADGE_VARIANT: Record<string, "buy" | "strongBuy" | "sell" | "strongSell" | "hold"> = {
-  STRONG_BUY: "strongBuy",
-  BUY: "buy",
-  HOLD: "hold",
-  SELL: "sell",
-  STRONG_SELL: "strongSell",
-};
-
-const SIGNAL_LABEL: Record<string, string> = {
-  STRONG_BUY: "STRONG BUY",
-  BUY: "BUY",
-  HOLD: "HOLD",
-  SELL: "SELL",
-  STRONG_SELL: "STRONG SELL",
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -447,13 +432,10 @@ export function StockDetailModal({ ticker, onClose }: Props) {
   ]);
 
   // ── Derived UI state ──────────────────────────────────────────────────────────
-  const badgeVariant = signal ? (SIGNAL_BADGE_VARIANT[signal.signal] ?? "hold") : null;
-  const badgeLabel   = signal ? (SIGNAL_LABEL[signal.signal] ?? "HOLD") : null;
+  const state = signal ? candleState(signal) : null;
   const currentPrice = livePrice ?? (signal?.raw_indicators?.current_price as number | undefined) ?? null;
   const smaLabels    = data?.sma_labels ?? ["SMA 20", "SMA 50", "SMA 200"];
 
-  const dirColor = (d: string | null) =>
-    d === "UP" ? "text-primary" : d === "DOWN" ? "text-destructive" : "text-muted-foreground";
   const dirArrow = (d: string | null) =>
     d === "UP" ? "↑" : d === "DOWN" ? "↓" : "→";
 
@@ -497,10 +479,11 @@ export function StockDetailModal({ ticker, onClose }: Props) {
               </span>
             )}
           </div>
-          {badgeVariant && (
-            <Badge variant={badgeVariant} className="text-xs font-semibold">
-              {badgeLabel}
-            </Badge>
+          {state?.color && (
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground whitespace-nowrap">
+              <CandleSwatch color={state.color} />
+              {state.label}
+            </span>
           )}
         </div>
 
@@ -594,8 +577,8 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                       {([
                         { color: "#1565C0", label: "Blue", desc: "Uptrend continuation", border: false },
                         { color: "#00FFFF", label: "Cyan", desc: "Downtrend continuation", border: true },
-                        { color: "#FF4444", label: "Red", desc: "Bullish reversal — BUY signal", border: false },
-                        { color: "#FFD700", label: "Yellow", desc: "Bearish reversal — SELL signal", border: true },
+                        { color: "#FF4444", label: "Red", desc: "Bullish flip — the trend just turned up", border: false },
+                        { color: "#FFD700", label: "Yellow", desc: "Bearish flip — the trend just turned down", border: true },
                       ] as const).map((c) => (
                         <div key={c.label} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
                           <span className={`w-3 h-3 rounded-xs shrink-0 mt-0.5 ${c.border ? "border border-black/[0.10]" : ""}`} style={{ backgroundColor: c.color }} />
@@ -839,48 +822,42 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                 </Alert>
               )}
 
-              {/* 1. Verdict row */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  {badgeVariant && <Badge variant={badgeVariant} className="text-xs font-semibold">{badgeLabel}</Badge>}
-                  <span className="font-mono text-lg font-semibold text-foreground">{ticker}</span>
-                </div>
-                {currentPrice != null && (
-                  <span className="font-mono text-lg tabular-nums text-foreground">${currentPrice.toFixed(2)}</span>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-sm text-muted-foreground truncate mr-2">
-                  {liveQuote?.company_name ?? ticker}
-                </span>
-                {changePct != null && (
-                  <span className="text-sm text-muted-foreground font-mono tabular-nums">
-                    {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
-                  </span>
-                )}
-              </div>
+              {/* 1. Signal — the same words and colors as the dashboard */}
+              <div className="text-xs font-medium text-muted-foreground mb-2">Signal</div>
+              <StateCell signal={signal} size="lg" />
 
-
-              {/* 4. Why */}
+              {/* 2. Context in plain words */}
               <div className="border-t border-border mt-4 pt-4">
-                <div className="text-sm text-muted-foreground mb-2">Why</div>
-                {signal.key_reason && (
-                  <p className="text-sm text-foreground leading-relaxed">{signal.key_reason}</p>
-                )}
-                {signal.raw_indicators?.rsi_14 != null && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    RSI (14) <span className="font-mono tabular-nums font-semibold text-foreground ml-1">{(signal.raw_indicators.rsi_14 as number).toFixed(1)}</span>
-                    <span className="ml-1">
-                      {(signal.raw_indicators.rsi_14 as number) < 30 ? "oversold" :
-                       (signal.raw_indicators.rsi_14 as number) > 70 ? "overbought" : "neutral"}
-                    </span>
-                  </p>
-                )}
+                <div className="text-xs font-medium text-muted-foreground mb-2">Context</div>
+                <dl className="space-y-1.5 text-sm">
+                  {signal.raw_indicators?.rsi_14 != null && (() => {
+                    const rsi = signal.raw_indicators.rsi_14 as number;
+                    return (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-muted-foreground">RSI (14)</dt>
+                        <dd className="text-foreground">
+                          <span className="font-mono tabular-nums font-semibold">{rsi.toFixed(1)}</span>{" "}
+                          {rsi < 30 ? "oversold" : rsi > 70 ? "overbought" : "neutral"}
+                        </dd>
+                      </div>
+                    );
+                  })()}
+                  {signal.raw_indicators?.volume_ratio != null && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Volume</dt>
+                      <dd className="text-foreground">
+                        <span className="font-mono tabular-nums font-semibold">{(signal.raw_indicators.volume_ratio as number).toFixed(1)}×</span>{" "}
+                        its 20-day average
+                      </dd>
+                    </div>
+                  )}
+                </dl>
               </div>
 
-              {/* 5. Direction outlook */}
+              {/* 3. Recent momentum — backward-looking price change, not a forecast */}
               <div className="border-t border-border mt-4 pt-4">
-                <div className="text-sm text-muted-foreground mb-2">Direction outlook</div>
+                <div className="text-xs font-medium text-muted-foreground">Recent momentum</div>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-2">Price change over the last 3, 7 and 14 days</p>
                 <div className="flex items-center gap-4 text-sm">
                   {[
                     { label: "3d",  dir: signal.price_direction_3d  },
@@ -888,21 +865,23 @@ export function StockDetailModal({ ticker, onClose }: Props) {
                     { label: "14d", dir: signal.price_direction_14d },
                   ].map(({ label, dir }) => (
                     <span key={label} className="flex items-center gap-1">
-                      <span className={`font-mono ${dirColor(dir)}`}>{dirArrow(dir)}</span>
+                      <span className="font-mono text-foreground">{dirArrow(dir)}</span>
                       <span className="text-muted-foreground">{label}</span>
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* 6. Actions */}
+              {/* 4. Optional AI — never the strongest action on the page */}
               <div className="border-t border-border mt-4 pt-4 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">Optional AI context</div>
                 {/* Primary action */}
                 {contextState === "error" && (
                   <AiUnavailable label="Context read" reason={contextText} />
                 )}
                 {(contextState === "idle" || contextState === "error") && (
                   <Button
+                    variant="outline"
                     onClick={() => runAi(`/api/stocks/${ticker}/context`, "context", setContextState, setContextText)}
                     className="w-full rounded-full"
                   >

@@ -5,6 +5,7 @@ import api from "../api/client";
 import { describeError } from "./ErrorState";
 import { isStale, signalAge } from "@/lib/freshness";
 import { CandleSwatch, type CandleColor } from "./CandleSwatch";
+import { candleState, StateCell } from "./CandleState";
 import { dataIssue, needsDataCheck, type DataIssue } from "@/lib/dataQuality";
 import type { Signal } from "../hooks/useSignals";
 import type { LiveQuote } from "../hooks/useLivePrice";
@@ -56,44 +57,8 @@ interface Props {
 
 // ── Candle state ─────────────────────────────────────────────────────────────
 
-const STATE_LABEL: Record<CandleColor, string> = {
-  RED: "Bullish flip",
-  YELLOW: "Bearish flip",
-  BLUE: "Uptrend",
-  CYAN: "Downtrend",
-};
-
 // Fresh flips first, then trends; within a trend, the most recent flip first
 const STATE_ORDER: Record<CandleColor, number> = { RED: 0, YELLOW: 1, BLUE: 2, CYAN: 3 };
-
-interface CandleState {
-  color: CandleColor | null;
-  label: string;
-  detail: string;
-  sinceFlip: number | null;
-}
-
-function candleState(signal: Signal): CandleState {
-  const ri = signal.raw_indicators ?? {};
-  // Older rows may lack Danny Cheng fields; fall back to the signal itself
-  const color =
-    (ri.danny_current_color as CandleColor | undefined) ??
-    (signal.signal.endsWith("BUY") ? "RED" : signal.signal.endsWith("SELL") ? "YELLOW" : null);
-  const sinceFlip = (ri.danny_candles_since_signal as number | undefined) ?? null;
-  const lastFlip = (ri.danny_last_signal_color as string | null | undefined) ?? null;
-
-  if (!color) return { color: null, label: "Hold", detail: "Trend data unavailable", sinceFlip };
-
-  let detail: string;
-  if (color === "RED" || color === "YELLOW") {
-    detail = `${color === "RED" ? "Red" : "Yellow"} candle on the latest close`;
-  } else if (lastFlip && sinceFlip != null) {
-    detail = `${sinceFlip} candle${sinceFlip === 1 ? "" : "s"} since ${lastFlip.toLowerCase()} flip`;
-  } else {
-    detail = "No flip in the last 6 months";
-  }
-  return { color, label: STATE_LABEL[color], detail, sinceFlip };
-}
 
 type Bucket = "flipped" | "confirming" | "stale" | "holding";
 
@@ -121,19 +86,6 @@ function defaultOrder(a: Signal, b: Signal): number {
   const byData = Number(needsDataCheck(a)) - Number(needsDataCheck(b));
   if (byData !== 0) return byData;
   return (sa.sinceFlip ?? 999) - (sb.sinceFlip ?? 999);
-}
-
-function StateCell({ signal }: { signal: Signal }) {
-  const state = candleState(signal);
-  return (
-    <div className="flex items-center gap-2.5" title={signal.key_reason ?? undefined}>
-      {state.color ? <CandleSwatch color={state.color} className="h-4" /> : <span className="w-1.5 shrink-0" />}
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-foreground leading-snug">{state.label}</div>
-        <div className="text-xs text-muted-foreground leading-snug truncate">{state.detail}</div>
-      </div>
-    </div>
-  );
 }
 
 // ── Sort arrow ───────────────────────────────────────────────────────────────
