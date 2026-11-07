@@ -10,6 +10,7 @@ import yfinance as yf
 import pandas as pd
 import ta
 
+from ..auth import current_user_id
 from ..database import get_db
 from ..models import Signal as SignalModel
 from ..services import market_data, indicators as ind_service
@@ -210,13 +211,13 @@ def _call_claude_cli(prompt: str) -> str | None:
 
 
 @router.post("/{ticker}/context")
-async def get_context_read(ticker: str, db: Session = Depends(get_db)):
+async def get_context_read(ticker: str, user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     ticker = ticker.upper()
 
     # 1. Latest signal from DB
     signal_row = (
         db.query(SignalModel)
-        .filter(SignalModel.ticker == ticker)
+        .filter(SignalModel.user_id == user_id, SignalModel.ticker == ticker)
         .order_by(SignalModel.generated_at.desc())
         .first()
     )
@@ -474,7 +475,7 @@ def _build_setup_review_prompt(
 
 
 @router.post("/{ticker}/setup-review")
-async def get_setup_review(ticker: str, db: Session = Depends(get_db)):
+async def get_setup_review(ticker: str, user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     ticker = ticker.upper()
 
     # Data-integrity check
@@ -486,7 +487,7 @@ async def get_setup_review(ticker: str, db: Session = Depends(get_db)):
     # Latest signal from DB
     signal_row = (
         db.query(SignalModel)
-        .filter(SignalModel.ticker == ticker)
+        .filter(SignalModel.user_id == user_id, SignalModel.ticker == ticker)
         .order_by(SignalModel.generated_at.desc())
         .first()
     )

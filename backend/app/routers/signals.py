@@ -9,6 +9,7 @@ from sqlalchemy import func
 from datetime import datetime, timezone
 from typing import List
 
+from ..auth import current_user_id
 from ..database import get_db
 from ..models import Signal
 from ..schemas import SignalResponse
@@ -84,10 +85,11 @@ def _generate_signal_math(df, ind: dict, danny: dict) -> dict:
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.get("/latest", response_model=List[SignalResponse])
-def get_latest_signals(db: Session = Depends(get_db)):
+def get_latest_signals(user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """Return the most recent signal for each ticker in the watchlist."""
     subq = (
         db.query(Signal.ticker, func.max(Signal.generated_at).label("max_at"))
+        .filter(Signal.user_id == user_id)
         .group_by(Signal.ticker)
         .subquery()
     )
@@ -97,6 +99,7 @@ def get_latest_signals(db: Session = Depends(get_db)):
             subq,
             (Signal.ticker == subq.c.ticker) & (Signal.generated_at == subq.c.max_at),
         )
+        .filter(Signal.user_id == user_id)
         .order_by(Signal.generated_at.desc())
         .all()
     )
@@ -104,11 +107,11 @@ def get_latest_signals(db: Session = Depends(get_db)):
 
 
 @router.get("/{ticker}/history", response_model=List[SignalResponse])
-def get_signal_history(ticker: str, db: Session = Depends(get_db)):
+def get_signal_history(ticker: str, user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """Return all past signals for a specific ticker."""
     return (
         db.query(Signal)
-        .filter(Signal.ticker == ticker.upper())
+        .filter(Signal.user_id == user_id, Signal.ticker == ticker.upper())
         .order_by(Signal.generated_at.desc())
         .limit(50)
         .all()
@@ -116,7 +119,7 @@ def get_signal_history(ticker: str, db: Session = Depends(get_db)):
 
 
 @router.post("/generate", response_model=SignalResponse)
-def generate_signal(ticker: str, db: Session = Depends(get_db)):
+def generate_signal(ticker: str, user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """Generate a pure-math signal for one ticker and upsert into the watchlist."""
     ticker = ticker.upper()
 
@@ -157,7 +160,7 @@ def generate_signal(ticker: str, db: Session = Depends(get_db)):
         # Upsert: update today's existing row or insert new
         db_signal = (
             db.query(Signal)
-            .filter(Signal.ticker == ticker)
+            .filter(Signal.user_id == user_id, Signal.ticker == ticker)
             .filter(func.date(Signal.generated_at) == now.date())
             .first()
         )
@@ -168,6 +171,7 @@ def generate_signal(ticker: str, db: Session = Depends(get_db)):
             db_signal.generated_at   = now
         else:
             db_signal = Signal(
+                user_id=user_id,
                 ticker=ticker,
                 raw_indicators=ind,
                 generated_at=now,
@@ -185,7 +189,7 @@ def generate_signal(ticker: str, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh")
-def refresh_signal(ticker: str, db: Session = Depends(get_db)):
+def refresh_signal(ticker: str, user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """
     Refresh a signal for the modal: generate fresh if validation passes,
     fall back to the stale DB row with warnings if it doesn't.
@@ -198,7 +202,7 @@ def refresh_signal(ticker: str, db: Session = Depends(get_db)):
     if not ticker_status.is_valid:
         stale = (
             db.query(Signal)
-            .filter(Signal.ticker == ticker)
+            .filter(Signal.user_id == user_id, Signal.ticker == ticker)
             .order_by(Signal.generated_at.desc())
             .first()
         )
@@ -230,7 +234,7 @@ def refresh_signal(ticker: str, db: Session = Depends(get_db)):
 
         db_signal = (
             db.query(Signal)
-            .filter(Signal.ticker == ticker)
+            .filter(Signal.user_id == user_id, Signal.ticker == ticker)
             .filter(func.date(Signal.generated_at) == now.date())
             .first()
         )
@@ -241,6 +245,7 @@ def refresh_signal(ticker: str, db: Session = Depends(get_db)):
             db_signal.generated_at   = now
         else:
             db_signal = Signal(
+                user_id=user_id,
                 ticker=ticker,
                 raw_indicators=ind,
                 generated_at=now,
@@ -261,7 +266,7 @@ def refresh_signal(ticker: str, db: Session = Depends(get_db)):
         logger.error("Signal refresh failed for %s: %s", ticker, e, exc_info=True)
         stale = (
             db.query(Signal)
-            .filter(Signal.ticker == ticker)
+            .filter(Signal.user_id == user_id, Signal.ticker == ticker)
             .order_by(Signal.generated_at.desc())
             .first()
         )
@@ -273,10 +278,10 @@ def refresh_signal(ticker: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{ticker}")
-def delete_signal(ticker: str, db: Session = Depends(get_db)):
+def delete_signal(ticker: str, user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """Delete all signals for a ticker (remove from watchlist)."""
     ticker = ticker.upper()
-    deleted = db.query(Signal).filter(Signal.ticker == ticker).delete()
+    deleted = db.query(Signal).filter(Signal.user_id == user_id, Signal.ticker == ticker).delete()
     db.commit()
     if deleted == 0:
         raise HTTPException(status_code=404, detail=f"No signal found for {ticker}")

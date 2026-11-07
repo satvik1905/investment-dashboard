@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import date
 from typing import List
 
+from ..auth import current_user_id
 from ..database import get_db
 from ..models import Position, Journal
 from ..schemas import PositionCreate, PositionClose, PositionResponse
@@ -12,15 +13,15 @@ router = APIRouter()
 
 
 @router.get("", response_model=List[PositionResponse])
-def get_positions(db: Session = Depends(get_db)):
+def get_positions(user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """All open positions."""
-    return db.query(Position).filter(Position.status == "OPEN").order_by(Position.entry_date.desc()).all()
+    return db.query(Position).filter(Position.user_id == user_id, Position.status == "OPEN").order_by(Position.entry_date.desc()).all()
 
 
 @router.post("", response_model=PositionResponse)
-def add_position(position: PositionCreate, db: Session = Depends(get_db)):
+def add_position(position: PositionCreate, user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """Log a new trade entry."""
-    db_pos = Position(**position.model_dump())
+    db_pos = Position(**position.model_dump(), user_id=user_id)
     db.add(db_pos)
     db.commit()
     db.refresh(db_pos)
@@ -28,9 +29,14 @@ def add_position(position: PositionCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{position_id}/close", response_model=PositionResponse)
-def close_position(position_id: int, close_data: PositionClose, db: Session = Depends(get_db)):
+def close_position(
+    position_id: int,
+    close_data: PositionClose,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+):
     """Close a position and write it to the journal."""
-    pos = db.query(Position).filter(Position.id == position_id).first()
+    pos = db.query(Position).filter(Position.id == position_id, Position.user_id == user_id).first()
     if not pos:
         raise HTTPException(status_code=404, detail="Position not found")
     if pos.status != "OPEN":
@@ -49,6 +55,7 @@ def close_position(position_id: int, close_data: PositionClose, db: Session = De
     outcome = "WIN" if pnl > 0 else ("LOSS" if pnl < 0 else "BREAKEVEN")
 
     journal_entry = Journal(
+        user_id=user_id,
         ticker=pos.ticker,
         direction="LONG",
         entry_price=pos.entry_price,
@@ -69,6 +76,6 @@ def close_position(position_id: int, close_data: PositionClose, db: Session = De
 
 
 @router.get("/alerts")
-def get_position_alerts(db: Session = Depends(get_db)):
+def get_position_alerts(user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """Check all open positions against stop-loss and target levels."""
-    return monitor_positions(db)
+    return monitor_positions(db, user_id)

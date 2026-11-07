@@ -7,6 +7,7 @@ class Signal(Base):
     __tablename__ = "signals"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(64), index=True)  # Supabase user id (JWT sub)
     ticker = Column(String(10), nullable=False, index=True)
     signal = Column(String(20), nullable=False)  # STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL
     confidence = Column(Integer)  # 0-100
@@ -24,6 +25,7 @@ class Position(Base):
     __tablename__ = "positions"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(64), index=True)  # Supabase user id (JWT sub)
     ticker = Column(String(10), nullable=False, index=True)
     entry_price = Column(Numeric(10, 2), nullable=False)
     entry_date = Column(Date, nullable=False)
@@ -42,6 +44,7 @@ class Journal(Base):
     __tablename__ = "journal"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(64), index=True)  # Supabase user id (JWT sub)
     ticker = Column(String(10), nullable=False, index=True)
     direction = Column(String(10))  # LONG, SHORT
     entry_price = Column(Numeric(10, 2))

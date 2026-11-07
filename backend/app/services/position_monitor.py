@@ -12,12 +12,12 @@ from ..models import Position
 from .market_data import get_quote
 
 
-def monitor_positions(db: Session) -> list[dict]:
+def monitor_positions(db: Session, user_id: str) -> list[dict]:
     """
-    Check all open positions against their stop-loss and target price.
+    Check a user's open positions against their stop-loss and target price.
     Returns a list of simple HOLD/EXIT/UNKNOWN recommendations based on price alone.
     """
-    open_positions = db.query(Position).filter(Position.status == "OPEN").all()
+    open_positions = db.query(Position).filter(Position.user_id == user_id, Position.status == "OPEN").all()
     results = []
 
     for pos in open_positions:

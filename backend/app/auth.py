@@ -7,6 +7,9 @@ import httpx
 import jwt
 from dotenv import load_dotenv
 from fastapi import HTTPException, Request
+from sqlalchemy import text
+
+from .database import SessionLocal
 
 load_dotenv()
 
@@ -74,6 +77,53 @@ def _get_signing_key(token: str):
 
 
 # ---------------------------------------------------------------------------
+# Per-user data
+# ---------------------------------------------------------------------------
+# Owner used when there is no Supabase user (legacy password / no-auth modes).
+LOCAL_USER_ID = "local"
+
+# Tables whose rows belong to a single user.
+_USER_TABLES = ("signals", "positions", "journal")
+_orphans_claimed: bool = False
+
+
+def _claim_orphans(user_id: str) -> None:
+    """
+    Hand rows created before per-user data existed (user_id IS NULL) to the owner.
+    Runs once per process; a no-op after the first successful claim.
+    """
+    global _orphans_claimed
+    if _orphans_claimed:
+        return
+    db = SessionLocal()
+    try:
+        claimed = 0
+        for table in _USER_TABLES:
+            result = db.execute(
+                text(f"UPDATE {table} SET user_id = :uid WHERE user_id IS NULL"),
+                {"uid": user_id},
+            )
+            claimed += result.rowcount or 0
+        db.commit()
+        _orphans_claimed = True
+        if claimed:
+            logger.warning("AUTH: assigned %d pre-existing rows to %s", claimed, user_id)
+    except Exception as exc:
+        db.rollback()
+        logger.error("AUTH: failed to claim pre-existing rows: %s", exc)
+    finally:
+        db.close()
+
+
+def current_user_id(request: Request) -> str:
+    """FastAPI dependency: the id that owns the caller's signals, positions and journal."""
+    user_id = getattr(request.state, "user_id", None)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user_id
+
+
+# ---------------------------------------------------------------------------
 # Startup log
 # ---------------------------------------------------------------------------
 if SUPABASE_URL:
@@ -129,9 +179,17 @@ async def require_auth(request: Request):
         except jwt.InvalidTokenError as exc:
             raise HTTPException(status_code=401, detail=f"Invalid token: {exc}")
 
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Token has no subject")
+
         # Populate request state for downstream use
-        request.state.user_id = payload.get("sub")
+        request.state.user_id = user_id
         request.state.user_email = payload.get("email")
+
+        email = request.state.user_email
+        if ADMIN_EMAIL and email and email.lower() == ADMIN_EMAIL.lower():
+            _claim_orphans(user_id)
         return
 
     # ----- Legacy password mode -----
@@ -139,7 +197,11 @@ async def require_auth(request: Request):
         token = request.headers.get("X-SwingIQ-Key", "")
         if not secrets.compare_digest(token, _PASSWORD):
             raise HTTPException(status_code=401, detail="Unauthorized")
+        request.state.user_id = LOCAL_USER_ID
+        _claim_orphans(LOCAL_USER_ID)
         return
 
     # ----- No auth (local dev) -----
+    request.state.user_id = LOCAL_USER_ID
+    _claim_orphans(LOCAL_USER_ID)
     return

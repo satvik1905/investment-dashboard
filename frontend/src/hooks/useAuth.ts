@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase, supabaseEnabled } from "../lib/supabase";
 
 // Sentinel session used when Supabase is not configured (local dev)
@@ -11,6 +12,7 @@ export function useAuth() {
   );
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(supabaseEnabled);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!supabaseEnabled) return;
@@ -25,7 +27,9 @@ export function useAuth() {
     // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
+      // Cached API data belongs to the user who fetched it
+      if (event === "SIGNED_OUT") queryClient.clear();
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
@@ -34,7 +38,7 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [queryClient]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

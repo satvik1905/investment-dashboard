@@ -52,7 +52,7 @@ def quote(monkeypatch):
 
 
 def check(position):
-    [result] = position_monitor.monitor_positions(FakeDB([position]))
+    [result] = position_monitor.monitor_positions(FakeDB([position]), "user-1")
     return result
 
 
@@ -124,6 +124,6 @@ def test_one_bad_quote_does_not_hide_other_positions(monkeypatch):
     bad, good = make_position(), make_position()
     bad.ticker, good.ticker = "BAD", "GOOD"
 
-    results = {r["ticker"]: r for r in position_monitor.monitor_positions(FakeDB([bad, good]))}
+    results = {r["ticker"]: r for r in position_monitor.monitor_positions(FakeDB([bad, good]), "user-1")}
     assert results["BAD"]["recommendation"] == "UNKNOWN"
     assert results["GOOD"]["recommendation"] == "EXIT"

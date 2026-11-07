@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
 
+from ..auth import current_user_id
 from ..database import get_db
 from ..models import Journal
 from ..schemas import JournalResponse, JournalAnalytics
@@ -11,15 +12,15 @@ router = APIRouter()
 
 
 @router.get("", response_model=List[JournalResponse])
-def get_journal(db: Session = Depends(get_db)):
+def get_journal(user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """All closed trades, most recent first."""
-    return db.query(Journal).order_by(Journal.exit_date.desc()).all()
+    return db.query(Journal).filter(Journal.user_id == user_id).order_by(Journal.exit_date.desc()).all()
 
 
 @router.get("/analytics", response_model=JournalAnalytics)
-def get_analytics(db: Session = Depends(get_db)):
+def get_analytics(user_id: str = Depends(current_user_id), db: Session = Depends(get_db)):
     """Win rate, total P&L, and performance statistics."""
-    trades = db.query(Journal).all()
+    trades = db.query(Journal).filter(Journal.user_id == user_id).all()
 
     if not trades:
         return JournalAnalytics(
