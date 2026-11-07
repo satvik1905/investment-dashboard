@@ -57,7 +57,11 @@ async def _load_jwks() -> None:
         )
 
 
-def _get_signing_key(token: str):
+# Asymmetric algorithms Supabase signs with (ES256 on current projects, RS256 on older ones)
+_ALLOWED_ALGORITHMS = ["ES256", "RS256"]
+
+
+def _get_signing_key(token: str) -> jwt.PyJWK:
     """Find the correct public key from the cached JWKS for the given token."""
     try:
         unverified_header = jwt.get_unverified_header(token)
@@ -65,15 +69,18 @@ def _get_signing_key(token: str):
         raise HTTPException(status_code=401, detail="Invalid token header")
 
     kid = unverified_header.get("kid")
-    for key_data in _jwks_keys:
-        if key_data.get("kid") == kid:
-            return jwt.algorithms.RSAAlgorithm.from_jwk(key_data)
-
+    key_data = next((k for k in _jwks_keys if k.get("kid") == kid), None)
     # If no kid match, try the first key (some Supabase setups use a single key)
-    if _jwks_keys:
-        return jwt.algorithms.RSAAlgorithm.from_jwk(_jwks_keys[0])
+    if key_data is None and _jwks_keys:
+        key_data = _jwks_keys[0]
+    if key_data is None:
+        raise HTTPException(status_code=401, detail="No matching signing key found")
 
-    raise HTTPException(status_code=401, detail="No matching signing key found")
+    try:
+        return jwt.PyJWK(key_data)
+    except jwt.PyJWKError as exc:
+        logger.error("AUTH: Unusable signing key %s: %s", key_data.get("kid"), exc)
+        raise HTTPException(status_code=401, detail="Unsupported signing key")
 
 
 # ---------------------------------------------------------------------------
@@ -162,13 +169,13 @@ async def require_auth(request: Request):
         if not token:
             raise HTTPException(status_code=401, detail="Empty Bearer token")
 
-        public_key = _get_signing_key(token)
+        signing_key = _get_signing_key(token)
 
         try:
             payload = jwt.decode(
                 token,
-                public_key,
-                algorithms=["RS256"],
+                signing_key,
+                algorithms=_ALLOWED_ALGORITHMS,
                 options={
                     "verify_exp": True,
                     "verify_aud": False,  # Supabase audience varies by project
