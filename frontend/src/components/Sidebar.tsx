@@ -1,6 +1,10 @@
 import { useAppStore } from "../store/appStore";
+import type { User } from "@supabase/supabase-js";
+import { useAuth } from "../hooks/useAuth";
+import { supabaseEnabled } from "../lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 const NAV_ITEMS = [
   {
@@ -37,6 +41,109 @@ const NAV_ITEMS = [
     ),
   },
 ] as const;
+
+const SIGN_OUT_ICON = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M6 14.5H3.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    <path d="M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+/** Display name from Supabase metadata, falling back to the email's local part. */
+function displayName(user: User | null): string {
+  const meta = user?.user_metadata ?? {};
+  const name = (meta.full_name || meta.name || "").trim();
+  if (name) return name;
+  return user?.email?.split("@")[0] ?? "Account";
+}
+
+function initials(name: string): string {
+  const words = name.split(/[\s._-]+/).filter(Boolean);
+  const letters = words.length > 1 ? words[0][0] + words[1][0] : name.slice(0, 2);
+  return letters.toUpperCase();
+}
+
+function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
+  return (
+    <span
+      aria-hidden
+      className={`${size === "lg" ? "w-9 h-9 text-sm" : "w-8 h-8 text-xs"} shrink-0 rounded-full bg-signal-buy-bg text-primary border border-primary/20 flex items-center justify-center font-semibold font-sans`}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+/** Avatar + name that opens a small account menu (identity and log out). */
+function AccountMenu({ collapsed = false, compact = false }: { collapsed?: boolean; compact?: boolean }) {
+  const { user, signOut } = useAuth();
+  const name = displayName(user);
+
+  let trigger;
+  if (compact) {
+    // Phone tab bar: avatar stacked over a label, like the other tabs
+    trigger = (
+      <button
+        type="button"
+        className="flex flex-col items-center justify-center gap-1 h-14 w-full text-[11px] font-medium cursor-pointer transition-colors text-muted-foreground active:text-foreground"
+      >
+        <span className="w-5 h-5 rounded-full bg-signal-buy-bg text-primary border border-primary/20 flex items-center justify-center text-[9px] font-semibold">
+          {initials(name)}
+        </span>
+        Account
+      </button>
+    );
+  } else {
+    trigger = (
+      <Button
+        variant="ghost"
+        aria-label={`Account: ${name}`}
+        className={`w-full flex items-center gap-3 h-auto rounded-lg hover:bg-accent ${collapsed ? "justify-center px-0 py-2" : "justify-start px-2 py-2"}`}
+      >
+        <Avatar name={name} />
+        {!collapsed && (
+          <span className="min-w-0 flex-1 text-left">
+            <span className="block text-sm font-medium text-foreground truncate">{name}</span>
+            {user?.email && (
+              <span className="block text-xs text-muted-foreground truncate">{user.email}</span>
+            )}
+          </span>
+        )}
+      </Button>
+    );
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent
+        side={compact ? "top" : collapsed ? "right" : "top"}
+        align={compact ? "end" : "start"}
+        sideOffset={8}
+        className="w-60 p-1.5"
+      >
+        <div className="flex items-center gap-3 px-2 py-2">
+          <Avatar name={name} size="lg" />
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-foreground truncate">{name}</div>
+            {user?.email && (
+              <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+            )}
+          </div>
+        </div>
+        <div className="my-1 h-px bg-border" />
+        <Button
+          variant="ghost"
+          onClick={signOut}
+          className="w-full flex items-center gap-2.5 px-2 py-2 h-auto rounded-md justify-start text-sm text-muted-foreground hover:text-foreground hover:bg-accent"
+        >
+          <span className="shrink-0">{SIGN_OUT_ICON}</span>
+          Log out
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function Sidebar() {
   const { activeTab, setActiveTab, sidebarOpen, setSidebarOpen } = useAppStore();
@@ -154,12 +261,19 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Account */}
+      {supabaseEnabled && (
+        <div className="px-2 pt-2 pb-3 border-t border-border">
+          <AccountMenu collapsed={collapsed} />
+        </div>
+      )}
+
       </TooltipProvider>
     </aside>
   );
 }
 
-/** Phone navigation: the same three destinations as the sidebar, within thumb reach. */
+/** Phone navigation: the same three destinations as the sidebar, plus the account menu, within thumb reach. */
 export function BottomNav() {
   const { activeTab, setActiveTab } = useAppStore();
 
@@ -168,7 +282,7 @@ export function BottomNav() {
       aria-label="Main"
       className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-card/95 backdrop-blur border-t border-border pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="grid grid-cols-3">
+      <div className={`grid ${supabaseEnabled ? "grid-cols-4" : "grid-cols-3"}`}>
         {NAV_ITEMS.map((item) => {
           const active = activeTab === item.id;
           return (
@@ -186,6 +300,7 @@ export function BottomNav() {
             </button>
           );
         })}
+        {supabaseEnabled && <AccountMenu compact />}
       </div>
     </nav>
   );
